@@ -1,0 +1,399 @@
+/* ===== SETTINGS TRIGGER ===== */
+
+.schema-container .settings-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--schema-space-sm);
+  border-radius: var(--schema-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--schema-text-muted);
+  transition: all var(--schema-transition);
+  position: relative;
+}
+
+.schema-container .settings-trigger:hover {
+  background: var(--schema-surface-hover);
+  color: var(--schema-text);
+  transform: rotate(45deg);
+}
+
+.schema-container .settings-trigger:active {
+  transform: rotate(45deg) scale(0.95);
+}
+
+.schema-container .settings-trigger svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* ===== SETTINGS OVERLAY ===== */
+
+.schema-container .settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* ===== SETTINGS MODAL ===== */
+
+.schema-container .settings-modal {
+  background: var(--schema-surface);
+  border: 1px solid var(--schema-border);
+  border-radius: var(--schema-radius-lg);
+  width: 90%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: slideUp 250ms ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== SETTINGS HEADER ===== */
+
+.schema-container .settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--schema-space-xl);
+  padding-bottom: var(--schema-space-lg);
+  border-bottom: 1px solid var(--schema-border);
+}
+
+.schema-container .settings-title {
+  font-size: var(--schema-text-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--schema-text);
+  letter-spacing: -0.01em;
+}
+
+.schema-container .settings-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--schema-space-sm);
+  border-radius: var(--schema-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--schema-text-muted);
+  transition: all var(--schema-transition);
+}
+
+.schema-container .settings-close:hover {
+  background: var(--schema-danger);
+  color: var(--schema-text-inverse);
+  transform: scale(1.05);
+}
+
+.schema-container .settings-close:active {
+  transform: scale(0.95);
+}
+
+.schema-container .settings-close svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ===== SETTINGS CONTENT ===== */
+
+.schema-container .settings-content {
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== SETTINGS SECTIONS ===== */
+
+.schema-container .settings-section {
+  padding: var(--schema-space-lg) var(--schema-space-xl);
+  border-bottom: 1px solid var(--schema-border);
+}
+
+.schema-container .settings-section:last-child {
+  border-bottom: none;
+}
+
+.schema-container .settings-section-title {
+  font-size: var(--schema-text-base);
+  font-weight: 600;
+  margin: 0 0 var(--schema-space-lg) 0;
+  color: var(--schema-text);
+  letter-spacing: -0.01em;
+}
+
+.schema-container .settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--schema-space-lg);
+}
+
+/* ===== SETTINGS OPTIONS ===== */
+
+.schema-container .settings-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--schema-space-md);
+  cursor: pointer;
+  padding: var(--schema-space-md);
+  border-radius: var(--schema-radius-md);
+  transition: all var(--schema-transition);
+  border: 1px solid transparent;
+  position: relative;
+}
+
+.schema-container .settings-option:hover {
+  background: var(--schema-surface-hover);
+  border-color: var(--schema-border);
+}
+
+.schema-container .settings-sub-option {
+  margin-left: var(--schema-space-xl);
+  padding-left: var(--schema-space-lg);
+  position: relative;
+}
+
+.schema-container .settings-sub-option::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--schema-border);
+  border-radius: 1px;
+}
+
+.schema-container .settings-option input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== CUSTOM CHECKBOX ===== */
+
+.schema-container .settings-checkbox {
+  position: relative;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--schema-border-strong);
+  border-radius: 0.25rem;
+  background: var(--schema-surface);
+  transition: all var(--schema-transition);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.schema-container .settings-option:hover .settings-checkbox {
+  border-color: var(--schema-accent);
+  box-shadow: 0 0 0 3px var(--schema-accent-soft);
+}
+
+.schema-container
+  .settings-option
+  input[type='checkbox']:checked
+  + .settings-option-content
+  .settings-checkbox {
+  background: var(--schema-accent);
+  border-color: var(--schema-accent);
+  color: var(--schema-text-inverse);
+}
+
+.schema-container
+  .settings-option
+  input[type='checkbox']:checked
+  + .settings-option-content
+  .settings-checkbox::after {
+  content: '✓';
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.schema-container
+  .settings-option
+  input[type='checkbox']:focus
+  + .settings-option-content
+  .settings-checkbox {
+  box-shadow: 0 0 0 3px var(--schema-accent-soft);
+  border-color: var(--schema-accent);
+}
+
+/* ===== OPTION CONTENT ===== */
+
+.schema-container .settings-option-content {
+  flex: 1;
+  display: flex;
+  gap: var(--schema-space-md);
+}
+
+.schema-container .settings-option-text {
+  flex: 1;
+}
+
+.schema-container .settings-option-label {
+  font-size: var(--schema-text-sm);
+  font-weight: 500;
+  color: var(--schema-text);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.4;
+}
+
+.schema-container .settings-option-description {
+  font-size: var(--schema-text-xs);
+  color: var(--schema-text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ===== SETTINGS FOOTER ===== */
+
+.schema-container .settings-footer {
+  padding: var(--schema-space-lg) var(--schema-space-xl);
+  border-top: 1px solid var(--schema-border);
+  background: var(--schema-surface);
+}
+
+.schema-container .settings-note {
+  font-size: var(--schema-text-xs);
+  color: var(--schema-text-muted);
+  margin: 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 640px) {
+  .schema-container .settings-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .schema-container .settings-header,
+  .schema-container .settings-section,
+  .schema-container .settings-footer {
+    padding-left: var(--schema-space-lg);
+    padding-right: var(--schema-space-lg);
+  }
+
+  .schema-container .settings-option {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--schema-space-sm);
+  }
+
+  .schema-container .settings-option-content {
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+/* ===== DARK THEME ADJUSTMENTS ===== */
+
+@media (prefers-color-scheme: dark) {
+  .schema-container .settings-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .schema-container .settings-modal {
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+@media (prefers-contrast: high) {
+  .schema-container .settings-trigger,
+  .schema-container .settings-close {
+    border: 1px solid var(--schema-border-strong);
+  }
+
+  .schema-container .settings-checkbox {
+    border-width: 2px;
+  }
+
+  .schema-container .settings-option {
+    border-width: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schema-container .settings-trigger:hover {
+    transform: none;
+  }
+
+  .schema-container .settings-trigger:active {
+    transform: none;
+  }
+
+  .schema-container .settings-close:hover {
+    transform: none;
+  }
+
+  .schema-container .settings-close:active {
+    transform: none;
+  }
+
+  .schema-container .settings-overlay {
+    animation: none;
+  }
+
+  .schema-container .settings-modal {
+    animation: none;
+  }
+}
+
+/* ===== CUSTOM PROPERTIES FOR THEMING ===== */
+
+.schema-container {
+  --schema-radius-lg: 0.75rem;
+}

@@ -1,0 +1,104 @@
+/* Tooltip Component Styles */
+/* Minimal styles for animations and transitions only */
+/* Background and layout styles are handled inline to ensure they work */
+
+/* ===== PORTAL CONTAINER ===== */
+
+/* Ensure floating portal containers have high z-index */
+[data-floating-ui-portal] {
+  z-index: 999999 !important;
+  position: relative !important;
+}
+
+/* ===== ANIMATIONS ===== */
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes tooltip-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-2px);
+  }
+}
+
+.tooltip-content {
+  animation: tooltip-fade-in 150ms ease-out;
+}
+
+.tooltip-content.tooltip-fade-out {
+  animation: tooltip-fade-out 100ms ease-in forwards;
+}
+
+/* ===== REDUCED MOTION ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-content {
+    animation: none;
+  }
+
+  .tooltip-content.tooltip-fade-out {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* ===== ARROW STYLING ===== */
+
+/* Arrow borders based on placement - following Floating UI pattern */
+[data-placement^='top'] > div[style*='position: absolute'] {
+  border-left: none;
+  border-top: none;
+  border-right: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+[data-placement^='bottom'] > div[style*='position: absolute'] {
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid #e8e8e8;
+  border-top: 1px solid #e8e8e8;
+}
+
+[data-placement^='left'] > div[style*='position: absolute'] {
+  border-left: none;
+  border-bottom: none;
+  border-top: 1px solid #e8e8e8;
+  border-right: 1px solid #e8e8e8;
+}
+
+[data-placement^='right'] > div[style*='position: absolute'] {
+  border-right: none;
+  border-top: none;
+  border-left: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+/* ===== CODE STYLING ===== */
+
+.tooltip-content code {
+  background: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 3px !important;
+  padding: 2px 4px !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 0.875em !important;
+  color: #1f2937 !important;
+}
+
+.tooltip-content strong {
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}

@@ -1,0 +1,97 @@
+.schema-warning {
+  border: 1px solid var(--color-warning-border);
+  border-radius: 8px;
+  background: var(--color-warning-bg);
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.schema-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.schema-warning-icon {
+  color: var(--color-warning-text);
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.schema-warning-feature {
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+.schema-warning-content {
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.schema-warning-description {
+  margin: 0 0 8px 0;
+  font-size: 0.875rem;
+}
+
+.schema-warning-suggestion {
+  margin: 8px 0 0 0;
+  font-size: 0.875rem;
+}
+
+.schema-warning-suggestion strong {
+  color: var(--color-text-primary);
+}
+
+/* Badge styling for warning variant */
+.badge.warning {
+  background: var(--color-warning-accent);
+  color: var(--color-text-on-warning);
+  font-weight: 600;
+}
+
+/* CSS variables fallbacks */
+:root {
+  --color-warning-bg: #fefce8;
+  --color-warning-border: #eab308;
+  --color-warning-text: #ca8a04;
+  --color-warning-accent: #eab308;
+  --color-text-on-warning: #ffffff;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-warning-bg: #422006;
+    --color-warning-border: #ca8a04;
+    --color-warning-text: #fbbf24;
+    --color-warning-accent: #ca8a04;
+    --color-text-on-warning: #1f2937;
+  }
+
+  .schema-warning-feature {
+    background: var(--color-bg-muted-dark);
+    border-color: var(--color-border-dark);
+    color: var(--color-text-primary-dark);
+  }
+}
+
+/* Compact variant for inline warnings */
+.schema-warning.compact {
+  padding: 8px 12px;
+  margin: 6px 0;
+  font-size: 0.875rem;
+}
+
+.schema-warning.compact .schema-warning-header {
+  margin-bottom: 6px;
+}
+
+.schema-warning.compact .schema-warning-description {
+  margin-bottom: 4px;
+}

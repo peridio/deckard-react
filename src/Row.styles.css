@@ -1,0 +1,160 @@
+/* Base Row Component Styles */
+/* All styles are scoped to .schema-container to prevent global conflicts */
+
+/* ===== BASE ROW STYLES ===== */
+
+.schema-container .row {
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: background-color var(--schema-transition);
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* ===== ROW BORDERS ===== */
+
+.schema-container .row {
+  border-top: 1px solid var(--schema-border);
+  border-bottom: 1px solid var(--schema-border);
+}
+
+.schema-container .row:first-child {
+  border-top: 2px solid var(--schema-border);
+}
+
+.schema-container .row:last-child {
+  border-bottom: 2px solid var(--schema-border);
+}
+
+.schema-container .row:last-of-type:not(:last-child) {
+  border-bottom: 1px solid var(--schema-border);
+}
+
+/* ===== ROW HEADER CONTAINER ===== */
+
+.schema-container .row-header-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 2.5rem;
+  position: relative;
+  transition: background-color var(--schema-transition);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ===== ROW CONTROLS ===== */
+
+.schema-container .row-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-xs);
+  padding: 0.625rem var(--schema-space-md);
+  flex-shrink: 0;
+  order: 2;
+}
+
+.schema-container .row-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--schema-space-xs);
+  border-radius: var(--schema-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--schema-text-muted);
+  transition: all var(--schema-transition);
+}
+
+.schema-container .row-button:hover {
+  background: var(--schema-surface-hover);
+  color: var(--schema-text);
+}
+
+.schema-container .row-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.schema-container .row-button:disabled:hover {
+  background: none;
+  color: var(--schema-text-muted);
+}
+
+.schema-container .row-button svg {
+  width: var(--schema-text-base);
+  height: var(--schema-text-base);
+}
+
+/* ===== ROW CONTENT ===== */
+
+.schema-container .row-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem var(--schema-space-md);
+  order: 1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.schema-container .row-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--schema-space-xs);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* ===== NESTED ROW OVERRIDES ===== */
+
+.schema-container .nested-properties .nested-row {
+  border-top: 1px solid var(--schema-border);
+  border-bottom: 1px solid var(--schema-border);
+  background: var(--schema-surface);
+  min-height: auto;
+  margin-bottom: 0;
+  border-radius: 0;
+}
+
+.schema-container .nested-properties .nested-row:first-child {
+  border-top: 2px solid var(--schema-border);
+}
+
+.schema-container .nested-properties .nested-row:last-child {
+  border-bottom: 2px solid var(--schema-border);
+}
+
+.schema-container .nested-properties .nested-row .row-header-container {
+  align-items: center;
+  min-height: 2.5rem;
+}
+
+.schema-container .nested-properties .nested-row .row-content {
+  flex: 1;
+  min-width: 0;
+  padding: 0.625rem var(--schema-space-md);
+  order: 1;
+  display: flex;
+  align-items: center;
+}
+
+.schema-container .nested-properties .nested-row .row-inline {
+  width: 100%;
+}

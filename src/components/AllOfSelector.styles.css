@@ -1,0 +1,80 @@
+.allof-selector {
+  border: 1px solid var(--color-border-light);
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+  padding: 0;
+  margin: 4px 0;
+}
+
+.allof-header {
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+}
+
+.allof-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.allof-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.allof-content {
+  padding: 8px 12px;
+}
+
+.allof-content .property-description-block {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: var(--color-bg-default);
+  border-radius: 4px;
+  border-left: 3px solid var(--color-accent-primary);
+}
+
+.allof-properties {
+  margin: 0;
+  padding: 0;
+}
+
+.allof-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.allof-empty p {
+  margin: 0;
+}
+
+/* Enhanced styling for allOf header badge only */
+.allof-selector .allof-header .badge {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .allof-selector {
+    border-color: var(--color-border-dark);
+    background: var(--color-bg-subtle-dark);
+  }
+
+  .allof-header {
+    background: var(--color-bg-muted-dark);
+    border-bottom-color: var(--color-border-dark);
+  }
+
+  .allof-content .property-description-block {
+    background: var(--color-bg-default-dark);
+    border-left-color: var(--color-accent-primary-dark);
+  }
+}

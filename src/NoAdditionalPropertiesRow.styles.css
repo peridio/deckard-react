@@ -1,0 +1,75 @@
+/* No Additional Properties Row Component Styles */
+/* All styles are scoped to .schema-container to prevent global conflicts */
+
+/* ===== NO ADDITIONAL PROPERTIES ROW ===== */
+
+.schema-container .no-additional-properties {
+  min-height: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  opacity: 0.8;
+}
+
+.schema-container .no-additional-properties:hover,
+.schema-container .no-additional-properties .row-header-container:hover {
+  background: transparent;
+}
+
+/* ===== DISABLED ELEMENTS ===== */
+
+.schema-container .disabled {
+  color: var(--schema-text-muted);
+  opacity: 0.7;
+}
+
+.schema-container .property-name.disabled {
+  font-style: italic;
+  font-family: var(--schema-font-mono);
+  font-size: var(--schema-text-base);
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.schema-container .type-badge.disabled {
+  background: transparent;
+  border: 1px dashed var(--schema-border-strong);
+  padding: 0.125rem 0.375rem;
+  font-size: var(--schema-text-xs);
+  font-weight: 500;
+  border-radius: var(--schema-radius-sm);
+  text-transform: lowercase;
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.schema-container .no-additional-properties .row-button {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.schema-container .no-additional-properties .row-button:hover {
+  background: none;
+  color: var(--schema-text-muted);
+}
+
+.schema-container .disabled-icon {
+  font-size: var(--schema-text-xs);
+  font-weight: bold;
+}
+
+/* ===== FOCUS PREVENTION ===== */
+
+.schema-container .no-additional-properties:focus,
+.schema-container .no-additional-properties:focus-visible,
+.schema-container .no-additional-properties .row-header-container:focus,
+.schema-container .no-additional-properties .row-header-container:focus-visible {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.schema-container .no-additional-properties,
+.schema-container .no-additional-properties .row-header-container {
+  cursor: default;
+}

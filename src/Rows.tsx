@@ -19,6 +19,8 @@ interface RowsProps {
   onFocusChange?: (propertyKey: string | null) => void;
   showNoAdditionalProperties?: boolean;
   className?: string;
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
+  searchQuery?: string;
 }
 
 const Rows: React.FC<RowsProps> = ({
@@ -36,6 +38,8 @@ const Rows: React.FC<RowsProps> = ({
   onFocusChange,
   showNoAdditionalProperties = false,
   className = '',
+  options,
+  searchQuery,
 }) => {
   const rowsClasses = ['properties-rows', className].filter(Boolean).join(' ');
 
@@ -63,6 +67,8 @@ const Rows: React.FC<RowsProps> = ({
             toggleProperty={toggleProperty}
             focusedProperty={focusedProperty}
             onFocusChange={onFocusChange}
+            options={options}
+            searchQuery={searchQuery}
           />
         );
       })}

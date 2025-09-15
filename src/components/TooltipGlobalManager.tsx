@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface TooltipGlobalManagerContextType {
   showAllTooltips: boolean;
@@ -35,15 +29,10 @@ export const useTooltipGlobalManager = () => {
 export const TooltipGlobalManagerProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const [showAllTooltips, setShowAllTooltips] = useState(false);
+  const [showAllTooltips] = useState(false);
   const [registeredTooltips] = useState<
     Map<string, { show: () => void; hide: () => void }>
   >(new Map());
-
-  // Log when provider mounts
-  useEffect(() => {
-    // TooltipGlobalManagerProvider mounted and ready
-  }, []);
 
   const registerTooltip = useCallback(
     (id: string, showTooltip: () => void, hideTooltip: () => void) => {
@@ -58,43 +47,6 @@ export const TooltipGlobalManagerProvider: React.FC<{
     },
     [registeredTooltips]
   );
-
-  // Handle Ctrl key press for all platforms
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isRevealKey = event.ctrlKey;
-
-      // Key pressed: { key, ctrlKey, isRevealKey }
-
-      if (isRevealKey && !showAllTooltips) {
-        setShowAllTooltips(true);
-        // Show all registered tooltips
-        registeredTooltips.forEach(({ show }) => {
-          show();
-        });
-      }
-    };
-
-    const handleKeyUp = (event: KeyboardEvent) => {
-      const wasRevealKey = !event.ctrlKey;
-
-      if (wasRevealKey && showAllTooltips) {
-        setShowAllTooltips(false);
-        // Hide all registered tooltips (except pinned ones)
-        registeredTooltips.forEach(({ hide }) => {
-          hide();
-        });
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [showAllTooltips, registeredTooltips]);
 
   const value: TooltipGlobalManagerContextType = {
     showAllTooltips,

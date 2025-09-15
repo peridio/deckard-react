@@ -14,6 +14,8 @@ interface OneOfSelectorProps {
   toggleProperty?: (key: string) => void;
   focusedProperty?: string | null;
   onFocusChange?: (propertyKey: string | null) => void;
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
+  searchQuery?: string;
 }
 
 const OneOfSelector: React.FC<OneOfSelectorProps> = ({
@@ -25,6 +27,8 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
   toggleProperty,
   focusedProperty,
   onFocusChange,
+  options,
+  searchQuery,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -114,6 +118,8 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
         expanded: false,
         hasDetails: true,
         matchesSearch: true,
+        isDirectMatch: false,
+        hasNestedMatches: false,
       };
     });
     return states;
@@ -129,6 +135,8 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
           expanded: !prev[propertyKey]?.expanded,
           hasDetails: true,
           matchesSearch: true,
+          isDirectMatch: false,
+          hasNestedMatches: false,
         },
       }));
       // Still call the external toggle if provided
@@ -139,7 +147,6 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
 
   return (
     <div className="oneof-selector">
-      hehe
       <div className="oneof-tabs">
         {optionDisplays.map((display, index) => (
           <button
@@ -184,9 +191,11 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
               includeExamples={true}
               examplesOnFocusOnly={false}
               rootSchema={rootSchema}
-              toggleProperty={handleInternalToggle}
+              toggleProperty={toggleProperty}
               focusedProperty={focusedProperty}
               onFocusChange={onFocusChange}
+              options={options}
+              searchQuery={searchQuery}
             />
           </div>
         )}

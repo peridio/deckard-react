@@ -62,7 +62,7 @@
 /* ===== SETTINGS MODAL ===== */
 
 .schema-container .settings-modal {
-  background: var(--schema-surface);
+  background: var(--schema-modal-bg);
   border: 1px solid var(--schema-border);
   border-radius: var(--schema-radius-lg);
   width: 90%;
@@ -221,7 +221,7 @@
   height: 1.125rem;
   border: 2px solid var(--schema-border-strong);
   border-radius: 0.25rem;
-  background: var(--schema-surface);
+  background: var(--schema-modal-bg);
   transition: all var(--schema-transition);
   flex-shrink: 0;
   display: flex;
@@ -296,7 +296,7 @@
 .schema-container .settings-footer {
   padding: var(--schema-space-lg) var(--schema-space-xl);
   border-top: 1px solid var(--schema-border);
-  background: var(--schema-surface);
+  background: var(--schema-modal-bg);
 }
 
 .schema-container .settings-note {
@@ -390,6 +390,67 @@
   .schema-container .settings-modal {
     animation: none;
   }
+}
+
+/* ===== LANGUAGE SELECTION ===== */
+
+.schema-container .settings-language-option {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-sm);
+  margin-bottom: var(--schema-space-sm);
+  cursor: pointer;
+  padding: var(--schema-space-xs) var(--schema-space-sm);
+  border-radius: var(--schema-radius-sm);
+  transition: all var(--schema-transition);
+}
+
+.schema-container .settings-language-option:hover {
+  background: var(--schema-surface-hover);
+}
+
+.schema-container .settings-language-option input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.schema-container .settings-language-option .settings-checkbox {
+  border-radius: 50%;
+}
+
+.schema-container
+  .settings-language-option
+  input[type='radio']:checked
+  + .settings-checkbox {
+  background: var(--schema-accent);
+  border-color: var(--schema-accent);
+}
+
+.schema-container
+  .settings-language-option
+  input[type='radio']:checked
+  + .settings-checkbox::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--schema-text-inverse);
+  border-radius: 50%;
+  font-size: 0;
+}
+
+.schema-container
+  .settings-language-option
+  input[type='radio']:focus
+  + .settings-checkbox {
+  box-shadow: 0 0 0 3px var(--schema-accent-soft);
+  border-color: var(--schema-accent);
+}
+
+.schema-container .settings-language-option span {
+  font-size: var(--schema-text-sm);
+  font-weight: 500;
+  color: var(--schema-text);
 }
 
 /* ===== CUSTOM PROPERTIES FOR THEMING ===== */

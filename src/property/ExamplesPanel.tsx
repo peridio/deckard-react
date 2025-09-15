@@ -23,6 +23,7 @@ interface ExamplesPanelProps {
   rootSchema: JsonSchema;
   propertyPath: string[];
   onCopy?: (text: string, element: HTMLElement) => void;
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
 }
 
 type Format = 'json' | 'yaml' | 'toml';
@@ -32,59 +33,28 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
   rootSchema,
   propertyPath,
   onCopy,
+  options,
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<Format>(() => {
+    const defaultLanguage = options?.defaultExampleLanguage || 'yaml';
     if (typeof window === 'undefined') {
-      return 'toml';
+      return defaultLanguage;
     }
     try {
       return (
-        (localStorage.getItem('deckard-examples-format') as Format) || 'toml'
+        (localStorage.getItem('deckard-examples-format') as Format) ||
+        defaultLanguage
       );
     } catch {
-      return 'toml';
+      return defaultLanguage;
     }
   });
 
-  // Sync format across all ExamplesPanel instances
+  // Reset to default when options change
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'deckard-examples-format' && e.newValue) {
-        const newFormat = e.newValue as Format;
-        if (newFormat && ['json', 'yaml', 'toml'].includes(newFormat)) {
-          setSelectedFormat(newFormat);
-        }
-      }
-    };
-
-    // Listen for storage changes from other tabs/components
-    window.addEventListener('storage', handleStorageChange);
-
-    // Listen for custom events from same page (since storage event doesn't fire for same page)
-    const handleFormatChange = (e: CustomEvent) => {
-      const newFormat = e.detail as Format;
-      if (newFormat && ['json', 'yaml', 'toml'].includes(newFormat)) {
-        setSelectedFormat(newFormat);
-      }
-    };
-
-    window.addEventListener(
-      'deckard-format-change',
-      handleFormatChange as EventListener
-    );
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener(
-        'deckard-format-change',
-        handleFormatChange as EventListener
-      );
-    };
-  }, []);
+    const defaultLanguage = options?.defaultExampleLanguage || 'yaml';
+    setSelectedFormat(defaultLanguage);
+  }, [options?.defaultExampleLanguage]);
   const [highlighter, setHighlighter] = useState<HighlighterCore | null>(null);
   const [highlighterError, setHighlighterError] = useState<boolean>(false);
   const [lineWrap, setLineWrap] = useState<boolean>(false);
@@ -272,17 +242,8 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
             value={selectedFormat}
             onChange={format => {
               setSelectedFormat(format);
-              if (typeof window !== 'undefined') {
-                try {
-                  localStorage.setItem('deckard-examples-format', format);
-                  // Dispatch custom event to sync other panels on same page
-                  window.dispatchEvent(
-                    new CustomEvent('deckard-format-change', { detail: format })
-                  );
-                } catch {
-                  // Ignore localStorage errors
-                }
-              }
+              // Note: We don't save to localStorage here as this should only affect
+              // the current example, not the global default setting
             }}
             name="format-selector"
             size="md"
@@ -292,7 +253,7 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
             size="xs"
             className={`wrap-toggle-button ${lineWrap ? 'active' : ''}`}
             onClick={() => setLineWrap(!lineWrap)}
-            title={lineWrap ? 'Disable line wrap' : 'Enable line wrap'}
+            title={lineWrap ? 'Disable line wrap.' : 'Enable line wrap.'}
           >
             {lineWrap ? (
               <HiArrowsRightLeft />
@@ -327,7 +288,7 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
                     });
                   }
                 }}
-                title="Copy this example"
+                title="Copy this example."
               >
                 <FaCopy />
               </Button>

@@ -1,15 +1,46 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   FaChevronDown,
   FaChevronRight,
   FaLink,
   FaMapPin,
+  FaSearch,
 } from 'react-icons/fa';
 import { SchemaProperty, PropertyState, JsonSchema } from '../types';
-import { getSchemaType, hasExamples } from '../utils.js';
+import { getSchemaType, hasExamples } from '../utils';
 import ExamplesPanel from './ExamplesPanel';
 import { Badge, Tooltip } from '../components';
 import PropertyDetails from './PropertyDetails';
+
+const getTypeDescription = (type: string): string => {
+  switch (type.toLowerCase()) {
+    case 'string':
+      return 'Text data - can contain letters, numbers, and symbols.';
+    case 'number':
+      return 'Numeric data - integers and decimal numbers.';
+    case 'integer':
+      return 'Whole number data - no decimal places allowed.';
+    case 'boolean':
+      return 'True or false value.';
+    case 'array':
+      return 'List of items - can contain multiple values.';
+    case 'object':
+      return 'Structured data with properties and values.';
+    case 'null':
+      return 'Represents no value or empty data.';
+    case 'oneof':
+      return 'Must match exactly one of the defined schemas.';
+    case 'anyof':
+      return 'Must match at least one of the defined schemas.';
+    case 'enum':
+      return 'Must be one of a specific set of predefined values.';
+    default:
+      if (type.includes('|')) {
+        return 'Can be one of multiple data types.';
+      }
+      return 'The expected data type for this property.';
+  }
+};
 
 interface PropertyFieldProps {
   property: SchemaProperty;
@@ -26,6 +57,8 @@ interface PropertyFieldProps {
   _toggleProperty?: (key: string) => void;
   focusedProperty?: string | null;
   onFocusChange?: (propertyKey: string | null) => void;
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
+  searchQuery?: string;
 }
 
 const PropertyField: React.FC<PropertyFieldProps> = ({
@@ -43,8 +76,13 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
   _toggleProperty,
   focusedProperty,
   onFocusChange,
+  options,
+  searchQuery,
 }) => {
   const [isActiveRoute, setIsActiveRoute] = useState(false);
+
+  // Check if schema is valid
+  const hasValidSchema = property.schema != null;
 
   // Check if current URL hash matches this property's link
   useEffect(() => {
@@ -70,40 +108,49 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
   const handleHeaderClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (collapsible) {
+      if (collapsible && hasValidSchema) {
         onToggle();
       }
       // Set this property as focused when clicking header
       onFocusChange?.(propertyKey);
     },
-    [collapsible, onToggle, propertyKey, onFocusChange]
+    [collapsible, onToggle, propertyKey, onFocusChange, hasValidSchema]
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        if (collapsible) {
+        if (collapsible && hasValidSchema) {
           onToggle();
         }
       }
     },
-    [collapsible, onToggle]
+    [collapsible, onToggle, hasValidSchema]
   );
 
   const handleLinkClick = useCallback(
     (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Expand the row if it's collapsed (but don't collapse if expanded)
-      if (!state.expanded) {
-        onToggle();
+      // Allow middle-click and cmd+click to navigate without expanding
+      if (e.button === 1 || e.ctrlKey || e.metaKey) {
+        return; // Let browser handle navigation
       }
+
       // Set this property as focused when clicking link
       onFocusChange?.(propertyKey);
-      onCopyLink(propertyKey, e.currentTarget as HTMLElement);
+      // Expand the field if it's not already expanded
+      if (collapsible && hasValidSchema && !state.expanded) {
+        onToggle();
+      }
     },
-    [onCopyLink, propertyKey, state.expanded, onToggle, onFocusChange]
+    [
+      onFocusChange,
+      propertyKey,
+      collapsible,
+      hasValidSchema,
+      state.expanded,
+      onToggle,
+    ]
   );
 
   const handleFieldClick = useCallback(
@@ -135,16 +182,50 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
     [propertyKey, onFocusChange]
   );
 
+  // Generate the anchor URL for the link
+  const linkHref = useMemo(() => {
+    if (typeof window === 'undefined') return '#';
+    const anchor = `#${propertyKey}`;
+    return `${window.location.origin}${window.location.pathname}${anchor}`;
+  }, [propertyKey]);
+
   const renderPropertyDetails = useCallback(() => {
-    return <PropertyDetails property={property} onCopy={onCopy} />;
-  }, [property, onCopy]);
+    return (
+      <PropertyDetails
+        property={property}
+        onCopy={onCopy}
+        rootSchema={rootSchema}
+        onCopyLink={onCopyLink}
+        propertyStates={_propertyStates}
+        toggleProperty={_toggleProperty}
+        focusedProperty={focusedProperty}
+        onFocusChange={onFocusChange}
+        options={options}
+        searchQuery={searchQuery}
+      />
+    );
+  }, [
+    property,
+    onCopy,
+    rootSchema,
+    onCopyLink,
+    _propertyStates,
+    _toggleProperty,
+    focusedProperty,
+    onFocusChange,
+    options,
+    searchQuery,
+  ]);
 
   const propertyClasses = [
     'property',
     property.depth > 0 ? 'nested-property' : '',
     state.expanded ? 'expanded' : '',
     property.depth > 0 ? `depth-${Math.min(property.depth, 3)}` : '',
-    includeExamples && hasExamples(property.schema) ? 'has-examples' : '',
+    includeExamples && hasValidSchema && hasExamples(property.schema)
+      ? 'has-examples'
+      : '',
+    !hasValidSchema ? 'invalid-schema' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -157,25 +238,28 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
       onClick={handleFieldClick}
     >
       <div
-        className="property-header-container"
+        className="row-header-container property-header-container"
         onClick={handleHeaderClick}
         onKeyDown={handleKeyDown}
-        tabIndex={collapsible ? 0 : -1}
-        role={collapsible ? 'button' : undefined}
-        aria-expanded={state.expanded}
+        tabIndex={collapsible && hasValidSchema ? 0 : -1}
+        role={collapsible && hasValidSchema ? 'button' : undefined}
+        aria-expanded={hasValidSchema ? state.expanded : undefined}
         aria-label={
-          state.expanded
+          hasValidSchema && state.expanded
             ? `Collapse ${property.name}`
-            : `Expand ${property.name}`
+            : hasValidSchema
+              ? `Expand ${property.name}`
+              : `${property.name} - Invalid schema`
         }
         style={{
-          cursor: collapsible ? 'pointer' : 'default',
+          cursor: collapsible && hasValidSchema ? 'pointer' : 'default',
         }}
       >
         <div className="property-controls">
           {isActiveRoute && (
             <Tooltip
-              content="Current active route"
+              title="Current active route"
+              content="This field is currently focused via URL hash."
               placement="top"
               clickableBounds={true}
             >
@@ -187,22 +271,59 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
               </span>
             </Tooltip>
           )}
-          <button
+          {searchQuery && state.matchesSearch && !isActiveRoute && (
+            <Tooltip
+              title={
+                state.isDirectMatch && state.hasNestedMatches
+                  ? 'Direct and nested search match'
+                  : state.isDirectMatch
+                    ? 'Direct search match'
+                    : 'Contains search match'
+              }
+              content={
+                state.isDirectMatch && state.hasNestedMatches
+                  ? 'This property matches your search query and also contains nested matches.'
+                  : state.isDirectMatch
+                    ? 'This property matches your search query.'
+                    : 'This property contains nested matches for your search.'
+              }
+              placement="top"
+            >
+              <span
+                className={`row-button search-hit-indicator ${!state.isDirectMatch ? 'parent-match' : ''}`}
+                aria-label={`${property.name} ${state.isDirectMatch ? 'matches' : 'contains'} current search`}
+              >
+                <FaSearch />
+              </span>
+            </Tooltip>
+          )}
+          <a
+            href={linkHref}
             className="link-button"
             onClick={handleLinkClick}
-            title="Copy link to this field"
-            aria-label={`Copy link to ${property.name} field`}
+            title="Link to this field."
+            aria-label={`Link to ${property.name} field`}
           >
             <FaLink />
-          </button>
-          <button
-            className="expand-button"
-            onClick={handleHeaderClick}
-            tabIndex={-1}
-            aria-hidden="true"
-          >
-            {state.expanded ? <FaChevronDown /> : <FaChevronRight />}
-          </button>
+          </a>
+          {collapsible && hasValidSchema && (
+            <button
+              className="row-button expand-button"
+              onClick={handleHeaderClick}
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              {state.expanded ? <FaChevronDown /> : <FaChevronRight />}
+            </button>
+          )}
+          {!hasValidSchema && (
+            <span
+              className="invalid-schema-indicator"
+              title="Invalid schema data."
+            >
+              ⚠️
+            </span>
+          )}
         </div>
 
         <div className="property-content">
@@ -212,15 +333,8 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
             >
               {property.schema.__isPatternProperty ? (
                 <Tooltip
-                  content={
-                    <div>
-                      <strong>Pattern Property</strong>
-                      <br />
-                      This represents dynamic field names. Unlike fixed property
-                      names, this can match multiple different field names in
-                      your data.
-                    </div>
-                  }
+                  title="Pattern property"
+                  content="This represents dynamic field names. Unlike fixed property names, this can match multiple different field names in your data."
                   placement="top"
                 >
                   <Badge variant="pattern" size="sm">
@@ -232,25 +346,38 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
               )}
             </span>
             {schemaType && (
-              <Badge variant="type" size="sm">
-                {schemaType}
-              </Badge>
+              <Tooltip
+                title="Data type"
+                content={getTypeDescription(schemaType)}
+                placement="top"
+              >
+                <Badge variant="type" size="sm">
+                  {schemaType}
+                </Badge>
+              </Tooltip>
             )}
             {property.required && (
-              <Badge variant="required" size="sm">
+              <Badge className="required-badge" variant="required">
                 required
               </Badge>
             )}
-            {!state.expanded && property.schema.description && (
-              <span className="property-description-inline">
-                {property.schema.description}
+            {!state.expanded &&
+              hasValidSchema &&
+              property.schema.description && (
+                <span className="property-description-inline">
+                  {property.schema.description}
+                </span>
+              )}
+            {!state.expanded && !hasValidSchema && (
+              <span className="property-description-inline invalid-schema-description">
+                Schema data is undefined or invalid
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {state.expanded && (
+      {state.expanded && hasValidSchema && (
         <div
           className={`schema-details ${includeExamples && hasExamples(property.schema) && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
           data-has-examples={hasExamples(property.schema)}
@@ -272,12 +399,22 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                 className="schema-details-right"
                 data-debug="examples-panel-container"
               >
-                <ExamplesPanel
-                  currentProperty={property.schema}
-                  rootSchema={rootSchema}
-                  propertyPath={property.path || [propertyKey]}
-                  onCopy={onCopy}
-                />
+                {rootSchema ? (
+                  <ExamplesPanel
+                    currentProperty={property.schema}
+                    rootSchema={rootSchema}
+                    propertyPath={property.path || [propertyKey]}
+                    onCopy={onCopy}
+                    options={options}
+                  />
+                ) : (
+                  <div className="examples-panel-unavailable">
+                    <div className="examples-panel-message">
+                      <span className="examples-panel-icon">ⓘ</span>
+                      Root schema unavailable
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (

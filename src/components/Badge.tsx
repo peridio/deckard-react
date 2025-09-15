@@ -125,21 +125,32 @@ export const BadgeGroup: React.FC<BadgeGroupProps> = ({
           {label}:
         </Badge>
       )}
-      {values.map((value, index) => (
-        <Badge
-          key={index}
-          variant={badgeVariant}
-          size={badgeSize}
-          clickable={!!onValueClick}
-          onClick={() => onValueClick?.(value)}
-          title={onValueClick ? 'Click to copy' : undefined}
-          aria-label={
-            onValueClick ? `Copy value ${JSON.stringify(value)}` : undefined
-          }
-        >
-          {JSON.stringify(value)}
-        </Badge>
-      ))}
+      {values.map((value, index) => {
+        const displayValue =
+          typeof value === 'string'
+            ? value
+            : value === null
+              ? 'null'
+              : value === undefined
+                ? 'undefined'
+                : typeof value === 'boolean' || typeof value === 'number'
+                  ? String(value)
+                  : JSON.stringify(value);
+
+        return (
+          <Badge
+            key={index}
+            variant={badgeVariant}
+            size={badgeSize}
+            clickable={!!onValueClick}
+            onClick={() => onValueClick?.(value)}
+            title={onValueClick ? 'Click to copy' : undefined}
+            aria-label={onValueClick ? `Copy value ${displayValue}` : undefined}
+          >
+            {displayValue}
+          </Badge>
+        );
+      })}
     </div>
   );
 };

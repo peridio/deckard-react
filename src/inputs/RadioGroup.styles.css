@@ -33,21 +33,21 @@
 }
 
 .schema-container .radio-option.selected {
-  background: var(--schema-accent);
-  color: var(--schema-text-inverse);
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .schema-container .radio-option.selected:hover:not(.disabled) {
-  background: #2563eb;
-  color: var(--schema-text-inverse);
+  background: #bfdbfe;
+  color: #1e40af;
 }
 
 .schema-container .radio-option:active:not(.disabled) {
-  background: #dbeafe;
+  background: #f0f9ff;
 }
 
 .schema-container .radio-option.selected:active:not(.disabled) {
-  background: #1d4ed8;
+  background: #93c5fd;
 }
 
 .schema-container .radio-option.disabled {

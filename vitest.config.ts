@@ -8,10 +8,10 @@ export default defineConfig({
     setupFiles: ['./src/__tests__/setup.ts'],
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', 'src/__tests__/setup.ts', 'src/__tests__/test-utils.tsx'],
+    exclude: ['node_modules', 'dist'],
     coverage: {
       provider: 'v8',
-      exclude: ['src/**/*.d.ts', 'src/index.ts'],
+      exclude: ['src/**/*.d.ts', 'src/index.ts', 'src/__tests__/setup.ts'],
     },
   },
 });

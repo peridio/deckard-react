@@ -15,6 +15,8 @@ interface AllOfSelectorProps {
   focusedProperty?: string | null;
   onFocusChange?: (propertyKey: string | null) => void;
   propertyPath?: string[];
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
+  searchQuery?: string;
 }
 
 const AllOfSelector: React.FC<AllOfSelectorProps> = ({
@@ -27,6 +29,8 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
   focusedProperty,
   onFocusChange,
   propertyPath = [],
+  options,
+  searchQuery,
 }) => {
   // Resolve all schemas and merge them
   const mergedSchema = useMemo(() => {
@@ -119,6 +123,8 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
         expanded: false,
         hasDetails: true,
         matchesSearch: true,
+        isDirectMatch: false,
+        hasNestedMatches: false,
       };
     });
 
@@ -159,9 +165,11 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
               includeExamples={true}
               examplesOnFocusOnly={false}
               rootSchema={rootSchema}
-              toggleProperty={handleAllOfToggle}
+              toggleProperty={toggleProperty}
               focusedProperty={focusedProperty}
               onFocusChange={onFocusChange}
+              options={options}
+              searchQuery={searchQuery}
             />
           </div>
         )}

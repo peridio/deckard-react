@@ -118,9 +118,30 @@
   font-weight: 500;
 }
 
-/* Override cursor for tooltipped pattern property badges */
+/* Override cursor for tooltipped badges */
 .schema-container .tooltip-trigger .badge-pattern {
   cursor: help;
+}
+
+.schema-container .tooltip-trigger .badge-type {
+  cursor: help;
+}
+
+.schema-container .tooltip-trigger .badge-required {
+  cursor: help;
+}
+
+/* Ensure tooltipped buttons maintain proper cursor */
+.schema-container .tooltip-trigger .row-button {
+  cursor: pointer;
+}
+
+.schema-container .tooltip-trigger .row-button.link-button {
+  cursor: pointer;
+}
+
+.schema-container .tooltip-trigger .row-button.expand-button {
+  cursor: pointer;
 }
 
 .schema-container .pattern-code {
@@ -403,7 +424,7 @@
 }
 
 .schema-container .code-control-button:hover {
-  background: var(--schema-surface-hover);
+  background: rgba(59, 130, 246, 0.1);
   color: var(--schema-text);
   border-color: var(--schema-accent);
 }
@@ -581,4 +602,142 @@
 .schema-container .row-button.active-route-indicator:focus {
   outline: none;
   box-shadow: none;
+}
+
+/* ===== SEARCH HIT INDICATOR ===== */
+
+.schema-container .search-hit-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #00bcd4;
+  font-size: 0.875rem;
+  opacity: 1;
+  transition: all var(--schema-transition);
+}
+
+.schema-container .search-hit-indicator:hover {
+  opacity: 1;
+  color: #00acc1;
+}
+
+.schema-container .search-hit-indicator svg {
+  color: #00bcd4;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.schema-container .search-hit-indicator:hover svg {
+  color: #00acc1;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.schema-container .property-controls .row-button.search-hit-indicator {
+  background: transparent;
+  border: none;
+  cursor: help;
+  padding: 0;
+  border-radius: 0;
+  color: #06b6d4;
+}
+
+.schema-container .property-controls .row-button.search-hit-indicator:hover {
+  background: transparent;
+  transform: none;
+  border-color: transparent;
+  color: #0891b2;
+}
+
+.schema-container .row-button.search-hit-indicator:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ===== PARENT SEARCH HIT INDICATOR ===== */
+
+.schema-container .search-hit-indicator.parent-match {
+  color: #26c6da;
+  opacity: 0.6;
+}
+
+.schema-container .search-hit-indicator.parent-match:hover {
+  color: #00acc1;
+  opacity: 0.8;
+}
+
+.schema-container .search-hit-indicator.parent-match svg {
+  color: #26c6da;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.schema-container .search-hit-indicator.parent-match:hover svg {
+  color: #00acc1;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+/* ===== LINK BUTTON ANCHOR STYLES ===== */
+
+/* ===== EXAMPLES PANEL UNAVAILABLE ===== */
+
+.schema-container .examples-panel-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--schema-space-lg);
+  background: var(--schema-surface-hover);
+  border: 1px solid var(--schema-border-subtle);
+  border-radius: var(--schema-radius-sm);
+  min-height: 4rem;
+}
+
+.schema-container .examples-panel-message {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-sm);
+  color: var(--schema-text-muted);
+  font-size: var(--schema-text-sm);
+  text-align: center;
+}
+
+.schema-container .examples-panel-icon {
+  font-size: var(--schema-text-base);
+  font-weight: 600;
+  color: var(--schema-text-secondary);
+  opacity: 0.7;
+}
+
+/* ===== INVALID SCHEMA STATES ===== */
+
+.schema-container .property.invalid-schema {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.schema-container .invalid-schema-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--schema-text-sm);
+  color: #ef4444;
+  cursor: help;
+  opacity: 0.8;
+}
+
+.schema-container .invalid-schema-description {
+  color: #ef4444 !important;
+  font-style: italic;
+}
+
+.schema-container .property.invalid-schema .property-name {
+  color: var(--schema-text-muted);
+  opacity: 0.7;
+}
+
+.schema-container .property.invalid-schema:hover {
+  background: rgba(239, 68, 68, 0.08);
 }

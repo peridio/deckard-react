@@ -63,7 +63,9 @@
 .schema-container .no-additional-properties:focus,
 .schema-container .no-additional-properties:focus-visible,
 .schema-container .no-additional-properties .row-header-container:focus,
-.schema-container .no-additional-properties .row-header-container:focus-visible {
+.schema-container
+  .no-additional-properties
+  .row-header-container:focus-visible {
   outline: none;
   background: transparent;
   box-shadow: none;

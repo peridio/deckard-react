@@ -9,6 +9,7 @@ export const deckardSchemaStyles = `
   --schema-bg: transparent;
   --schema-surface: transparent;
   --schema-surface-hover: rgba(99, 152, 255, 0.04);
+  --schema-modal-bg: #ffffff;
   --schema-border: #e8e8e8;
   --schema-border-strong: #cbd5e1;
   --schema-border-subtle: rgba(0, 0, 0, 0.04);
@@ -77,6 +78,7 @@ export const deckardSchemaStyles = `
     --schema-code-bg: rgba(255, 255, 255, 0.06);
     --schema-accent-soft: rgba(59, 130, 246, 0.15);
     --schema-accent-hover: rgba(148, 204, 235, 0.08);
+    --schema-modal-bg: #ffffff;
   }
 }
 

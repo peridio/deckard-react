@@ -19,7 +19,7 @@ import './property/ExamplesPanel.styles.css';
 import './Rows.styles.css';
 import './components/Settings.styles.css';
 import './inputs/RadioGroup.styles.css';
-import { extractProperties, getSchemaType } from './utils.js';
+import { extractProperties, getSchemaType, resolveSchema } from './utils';
 import Rows from './Rows';
 import { Input } from './inputs';
 import { Settings } from './components';
@@ -40,6 +40,7 @@ const DEFAULT_OPTIONS: DeckardOptions = {
   collapsible: true,
   autoExpand: false,
   theme: 'auto',
+  defaultExampleLanguage: 'yaml',
 };
 
 // Load settings from localStorage
@@ -48,11 +49,18 @@ const loadStoredSettings = (siteKey?: string): Partial<DeckardOptions> => {
     if (typeof window === 'undefined') return {};
     const key = siteKey || window.location.hostname;
     const storageKey = `deckard-settings-${key}`;
+
     const stored = localStorage.getItem(storageKey);
-    return stored ? JSON.parse(stored) : {};
+    const parsedSettings = stored ? JSON.parse(stored) : {};
+
+    // Ensure searchable is explicitly enabled by default if not set
+    if (parsedSettings.searchable === undefined) {
+      parsedSettings.searchable = true;
+    }
+    return parsedSettings;
   } catch (error) {
     console.warn('Failed to load settings from localStorage:', error);
-    return {};
+    return { searchable: true };
   }
 };
 
@@ -95,12 +103,38 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
   className,
 }) => {
   // Load settings from localStorage and merge with provided options
-  const storedSettings = loadStoredSettings();
-  const [currentOptions, setCurrentOptions] = useState<DeckardOptions>({
-    ...DEFAULT_OPTIONS,
-    ...storedSettings,
-    ...options, // Props override localStorage settings
+  const storedSettings = loadStoredSettings(
+    typeof window !== 'undefined' ? window.location.hostname : 'default'
+  );
+
+  const [currentOptions, setCurrentOptions] = useState<DeckardOptions>(() => {
+    const merged = {
+      ...DEFAULT_OPTIONS,
+      ...storedSettings,
+      ...options, // Props override localStorage settings
+    };
+
+    // Ensure searchable is always explicitly set
+    if (merged.searchable === undefined || merged.searchable === null) {
+      merged.searchable = true;
+    }
+
+    return merged;
   });
+
+  // Update stored settings when currentOptions changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const siteKey = window.location.hostname;
+        const storageKey = `deckard-settings-${siteKey}`;
+        localStorage.setItem(storageKey, JSON.stringify(currentOptions));
+      } catch (error) {
+        console.warn('Failed to persist settings to localStorage:', error);
+      }
+    }
+  }, [currentOptions]);
+
   const mergedOptions = currentOptions;
 
   // Extract specific values to avoid dependency issues
@@ -134,10 +168,29 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
   const filteredProperties = useMemo(() => {
     if (!searchState.query) return properties;
 
+    const query = searchState.query.toLowerCase();
+
     return properties.filter(prop => {
-      const searchText =
-        `${prop.name} ${prop.schema.description || ''} ${getSchemaType(prop.schema, schema)}`.toLowerCase();
-      return searchText.includes(searchState.query.toLowerCase());
+      // Search field names
+      if (prop.name.toLowerCase().includes(query)) return true;
+
+      // Search descriptions
+      if (prop.schema.description?.toLowerCase().includes(query)) return true;
+
+      // Search schema type
+      if (getSchemaType(prop.schema, schema).toLowerCase().includes(query))
+        return true;
+
+      // Search examples
+      if (prop.schema.examples) {
+        for (const example of prop.schema.examples) {
+          const exampleText =
+            typeof example === 'string' ? example : JSON.stringify(example);
+          if (exampleText.toLowerCase().includes(query)) return true;
+        }
+      }
+
+      return false;
     });
   }, [properties, searchState.query, schema]);
 
@@ -159,7 +212,9 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         newStates[key] = {
           expanded: Boolean(autoExpand),
           hasDetails: true, // All fields are expandable now
-          matchesSearch: true,
+          matchesSearch: true, // Always true initially
+          isDirectMatch: false,
+          hasNestedMatches: false,
         };
 
         // Recursively initialize nested properties
@@ -177,24 +232,33 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     // Initialize all properties (top-level and nested)
     initializePropertyStates(schema, [], 0, schema);
 
-    // Handle URL hash for auto-expansion
+    setPropertyStates(newStates);
+  }, [schema, autoExpand, searchState.query]);
+
+  // Handle URL hash navigation - only on mount
+  useEffect(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     if (hash) {
       const fieldKey = hash.substring(1).replace(/-/g, '.');
 
-      // Expand all parent paths to make the target field visible
-      const pathParts = fieldKey.split('.');
-      for (let i = 1; i <= pathParts.length; i++) {
-        const parentPath = pathParts.slice(0, i).join('.');
-        if (newStates[parentPath]) {
-          newStates[parentPath].expanded = true;
-        }
-      }
+      // Update property states to expand path to target
+      setPropertyStates(prev => {
+        const newStates = { ...prev };
 
-      // Expand the target field itself
-      if (newStates[fieldKey]) {
-        newStates[fieldKey].expanded = true;
-      }
+        // Expand all parent paths to make the target field visible
+        const pathParts = fieldKey.split('.');
+        for (let i = 1; i <= pathParts.length; i++) {
+          const parentPath = pathParts.slice(0, i).join('.');
+          if (newStates[parentPath]) {
+            newStates[parentPath] = {
+              ...newStates[parentPath],
+              expanded: true,
+            };
+          }
+        }
+
+        return newStates;
+      });
 
       // Set the focused property state for proper styling
       setFocusedProperty(fieldKey);
@@ -206,31 +270,16 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
             fieldKey.replace(/\./g, '-')
           );
           if (targetElement) {
-            // Focus the header container to match click behavior
-            const headerContainer = targetElement.querySelector(
-              '.property-header-container'
-            ) as HTMLElement;
-            if (headerContainer) {
-              headerContainer.focus();
-            } else {
-              targetElement.setAttribute('tabindex', '-1');
-              targetElement.focus();
-            }
-
-            // Manual scroll since browser's initial scroll failed
-            if (typeof targetElement.scrollIntoView === 'function') {
-              targetElement.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-              });
-            }
+            targetElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+            });
+            targetElement.focus({ preventScroll: true });
           }
         }
       }, 100);
     }
-
-    setPropertyStates(newStates);
-  }, [schema, autoExpand]);
+  }, []); // Empty dependency array - only run on mount
 
   // Update search results
   useEffect(() => {
@@ -254,19 +303,111 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     (query: string) => {
       setSearchState(prev => ({ ...prev, query }));
 
-      // Auto-expand matching properties when searching
+      // When searching, collapse everything first, then expand matches
       if (query && collapsible) {
         const newStates = { ...propertyStates };
-        filteredProperties.forEach(prop => {
-          const key = prop.path.join('.');
-          if (newStates[key]?.hasDetails) {
-            newStates[key] = { ...newStates[key], expanded: true };
+        const queryLower = query.toLowerCase();
+
+        // First, collapse everything
+        Object.keys(newStates).forEach(key => {
+          if (newStates[key]) {
+            newStates[key] = {
+              ...newStates[key],
+              expanded: false,
+              matchesSearch: false,
+              isDirectMatch: false,
+              hasNestedMatches: false,
+            };
+          }
+        });
+
+        // Then find and mark direct matches
+        const directMatches = new Set<string>();
+        Object.keys(newStates).forEach(key => {
+          const pathSegments = key.split('.');
+
+          // Find the property in the schema to check for matches
+          let currentSchema = schema;
+
+          for (let i = 0; i < pathSegments.length; i++) {
+            const segment = pathSegments[i];
+            if (currentSchema.properties?.[segment]) {
+              currentSchema = currentSchema.properties[segment];
+              if (i === pathSegments.length - 1) {
+                // Check if this property matches search
+                const matches =
+                  segment.toLowerCase().includes(queryLower) ||
+                  currentSchema.description
+                    ?.toLowerCase()
+                    .includes(queryLower) ||
+                  getSchemaType(currentSchema, schema)
+                    .toLowerCase()
+                    .includes(queryLower) ||
+                  (currentSchema.examples &&
+                    currentSchema.examples.some(example => {
+                      const exampleText =
+                        typeof example === 'string'
+                          ? example
+                          : JSON.stringify(example);
+                      return exampleText.toLowerCase().includes(queryLower);
+                    })) ||
+                  false;
+
+                if (matches) {
+                  directMatches.add(key);
+                }
+              }
+            }
+          }
+        });
+
+        // Mark direct matches and propagate up parent chain
+
+        directMatches.forEach(matchKey => {
+          // Mark the direct match
+          if (newStates[matchKey]) {
+            newStates[matchKey] = {
+              ...newStates[matchKey],
+              expanded: true,
+              matchesSearch: true,
+              isDirectMatch: true,
+            };
+          }
+
+          // Propagate up the parent chain
+          const pathSegments = matchKey.split('.');
+          for (let i = pathSegments.length - 1; i > 0; i--) {
+            const parentKey = pathSegments.slice(0, i).join('.');
+            if (newStates[parentKey]) {
+              newStates[parentKey] = {
+                ...newStates[parentKey],
+                expanded: true,
+                matchesSearch: true,
+                hasNestedMatches: true,
+              };
+            }
+          }
+        });
+
+        setPropertyStates(newStates);
+      } else if (!query) {
+        // When clearing search, reset to default state
+        const newStates = { ...propertyStates };
+        Object.keys(newStates).forEach(key => {
+          if (newStates[key]) {
+            newStates[key] = {
+              ...newStates[key],
+              expanded: Boolean(autoExpand),
+              matchesSearch: true,
+              isDirectMatch: false,
+              hasNestedMatches: false,
+            };
           }
         });
         setPropertyStates(newStates);
       }
     },
-    [propertyStates, filteredProperties, collapsible]
+    [propertyStates, collapsible, schema, autoExpand]
   );
 
   const expandAll = useCallback(() => {
@@ -344,6 +485,9 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
       // Add nested properties if parent is expanded
       if (propertyStates[key]?.expanded && prop.schema) {
+        const allNestedProps: SchemaProperty[] = [];
+
+        // First, collect regular nested properties
         const nested = extractProperties(
           prop.schema,
           prop.path,
@@ -351,8 +495,31 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
           schema,
           []
         );
-        nested.sort((a, b) => a.name.localeCompare(b.name));
-        nested.forEach(nestedProp => addProperty(nestedProp, currentDepth + 1));
+        allNestedProps.push(...nested);
+
+        // Then, collect allOf properties if they exist
+        if (prop.schema.allOf) {
+          prop.schema.allOf.forEach(allOfSchema => {
+            const resolvedSchema = resolveSchema(allOfSchema, schema);
+            if (resolvedSchema.properties || resolvedSchema.patternProperties) {
+              const allOfPath = [...prop.path, 'allof'];
+              const allOfProps = extractProperties(
+                resolvedSchema,
+                allOfPath,
+                prop.depth + 1,
+                schema,
+                []
+              );
+              allNestedProps.push(...allOfProps);
+            }
+          });
+        }
+
+        // Sort all nested properties together alphabetically
+        allNestedProps.sort((a, b) => a.name.localeCompare(b.name));
+        allNestedProps.forEach(nestedProp =>
+          addProperty(nestedProp, currentDepth + 1)
+        );
       }
     };
 
@@ -483,14 +650,21 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         return;
       }
 
+      // Tooltip shimmer effect on Ctrl key
+      if (e.key === 'Control' && !e.repeat) {
+        if (typeof document !== 'undefined') {
+          document.documentElement.classList.add('tooltips-shimmer');
+        }
+      }
+
       // Always prevent default for hjkl keys to stop page scrolling
       if (['h', 'j', 'k', 'l'].includes(e.key.toLowerCase())) {
         e.preventDefault();
         e.stopPropagation();
       }
 
-      // Search shortcut: /
-      if (e.key === '/') {
+      // Search shortcut: Shift + /
+      if (e.key === '?' && e.shiftKey) {
         e.preventDefault();
         if (typeof document !== 'undefined') {
           const searchInput = document.querySelector(
@@ -531,14 +705,28 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Remove tooltip shimmer effect on Ctrl key release
+      if (e.key === 'Control') {
+        if (typeof document !== 'undefined') {
+          document.documentElement.classList.remove('tooltips-shimmer');
+        }
+      }
+    };
+
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', handleKeyDown, { capture: true });
-      return () =>
+      document.addEventListener('keyup', handleKeyUp, { capture: true });
+      return () => {
         document.removeEventListener('keydown', handleKeyDown, {
           capture: true,
         });
+        document.removeEventListener('keyup', handleKeyUp, {
+          capture: true,
+        });
+      };
     }
-  }, [expandAll, collapseAll, clearSearch, handleNavigation]);
+  }, [clearSearch, expandAll, collapseAll, handleNavigation]);
 
   // Click away to clear focused property
   useEffect(() => {
@@ -679,25 +867,17 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
               )}
             </div>
           )}
-          {searchable && (
-            <div className="schema-search">
-              <Input
-                type="search"
-                variant="search"
-                size="md"
-                placeholder="Search properties... (press /)"
-                value={searchState.query}
-                onChange={e => handleSearch(e.target.value)}
-                tabIndex={1}
-              />
-            </div>
-          )}
           {includePropertiesTitle && (
             <div className="properties-header">
               <h2>Properties</h2>
               <Settings
                 options={currentOptions}
                 onChange={handleSettingsChange}
+                siteKey={
+                  typeof window !== 'undefined'
+                    ? window.location.hostname
+                    : 'default'
+                }
               />
             </div>
           )}
@@ -706,26 +886,64 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
               <Settings
                 options={currentOptions}
                 onChange={handleSettingsChange}
+                siteKey={
+                  typeof window !== 'undefined'
+                    ? window.location.hostname
+                    : 'default'
+                }
+              />
+            </div>
+          )}
+
+          {searchable && (
+            <div className="schema-search">
+              <Input
+                type="search"
+                variant="search"
+                size="md"
+                placeholder="Search properties... (press Shift+/)"
+                value={searchState.query}
+                onChange={e => handleSearch(e.target.value)}
+                tabIndex={1}
               />
             </div>
           )}
           <div className="properties-section">
-            <Rows
-              className="properties-list"
-              properties={filteredProperties}
-              propertyStates={propertyStates}
-              onToggle={toggleProperty}
-              onCopy={copyToClipboard}
-              onCopyLink={copyFieldLink}
-              collapsible={Boolean(collapsible)}
-              includeExamples={Boolean(includeExamples)}
-              examplesOnFocusOnly={Boolean(examplesOnFocusOnly)}
-              rootSchema={schema}
-              toggleProperty={toggleProperty}
-              focusedProperty={focusedProperty}
-              onFocusChange={setFocusedProperty}
-              showNoAdditionalProperties={schema.additionalProperties === false}
-            />
+            {filteredProperties.length === 0 && searchState.query ? (
+              <div className="no-search-results">
+                <div className="no-search-results-icon">🔍</div>
+                <div className="no-search-results-message">
+                  <h3>No properties match your search</h3>
+                  <p>
+                    Try adjusting your search terms or clearing the search to
+                    see all properties.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <Rows
+                className="properties-list"
+                properties={filteredProperties}
+                propertyStates={propertyStates}
+                onToggle={toggleProperty}
+                onCopy={copyToClipboard}
+                onCopyLink={copyFieldLink}
+                collapsible={Boolean(collapsible)}
+                includeExamples={Boolean(includeExamples)}
+                examplesOnFocusOnly={Boolean(examplesOnFocusOnly)}
+                rootSchema={schema}
+                toggleProperty={toggleProperty}
+                focusedProperty={focusedProperty}
+                onFocusChange={setFocusedProperty}
+                showNoAdditionalProperties={
+                  schema.additionalProperties === false && !searchState.query
+                }
+                options={{
+                  defaultExampleLanguage: currentOptions.defaultExampleLanguage,
+                }}
+                searchQuery={searchState.query}
+              />
+            )}
           </div>
           {includeDefinitions && schema.definitions && (
             <div className="definitions-section">

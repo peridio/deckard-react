@@ -101,6 +101,7 @@ export interface DeckardOptions {
   collapsible?: boolean;
   autoExpand?: boolean;
   theme?: 'light' | 'dark' | 'auto';
+  defaultExampleLanguage?: 'json' | 'yaml' | 'toml';
 }
 
 export interface ExampleFormats {
@@ -113,6 +114,8 @@ export interface PropertyState {
   expanded: boolean;
   hasDetails: boolean;
   matchesSearch: boolean;
+  isDirectMatch?: boolean;
+  hasNestedMatches?: boolean;
 }
 
 export interface SearchState {

@@ -67,7 +67,7 @@
 
 .schema-container .wrap-toggle-button:hover,
 .schema-container .copy-button:hover {
-  background: var(--schema-surface-hover);
+  background: rgba(59, 130, 246, 0.1);
   color: var(--schema-text);
 }
 
@@ -130,7 +130,7 @@
 }
 
 .schema-container .example-copy-button:hover {
-  background: var(--schema-surface-hover);
+  background: rgba(59, 130, 246, 0.1);
   color: var(--schema-text);
 }
 

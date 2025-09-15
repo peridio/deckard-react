@@ -7,7 +7,7 @@ import {
   JsonSchema,
   PropertyState,
 } from '../types';
-import { getConstraints, getUnsupportedFeatures } from '../utils.js';
+import { getConstraints, getUnsupportedFeatures } from '../utils';
 import {
   Badge,
   BadgeGroup,
@@ -26,6 +26,8 @@ interface PropertyDetailsProps {
   toggleProperty?: (key: string) => void;
   focusedProperty?: string | null;
   onFocusChange?: (propertyKey: string | null) => void;
+  options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
+  searchQuery?: string;
 }
 
 const PropertyDetails: React.FC<PropertyDetailsProps> = ({
@@ -37,6 +39,8 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   toggleProperty,
   focusedProperty,
   onFocusChange,
+  options,
+  searchQuery,
 }) => {
   const constraints = getConstraints(property.schema);
 
@@ -73,14 +77,14 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           <button
             className="code-control-button"
             onClick={handleCopy}
-            title="Copy to clipboard"
+            title="Copy to clipboard."
           >
             <FaCopy />
           </button>
           <button
             className={`code-control-button ${isWrapped ? 'wrap-enabled' : ''}`}
             onClick={toggleWrap}
-            title="Toggle line wrap"
+            title="Toggle line wrap."
           >
             <HiBarsArrowDown />
           </button>
@@ -125,6 +129,8 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           toggleProperty={toggleProperty}
           focusedProperty={focusedProperty}
           onFocusChange={onFocusChange}
+          options={options}
+          searchQuery={searchQuery}
         />
       )}
 
@@ -140,6 +146,8 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
           focusedProperty={focusedProperty}
           onFocusChange={onFocusChange}
           propertyPath={property.path}
+          options={options}
+          searchQuery={searchQuery}
         />
       )}
 
@@ -248,7 +256,17 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         <BadgeGroup
           values={property.schema.enum}
           onValueClick={value => {
-            onCopy(JSON.stringify(value), document.createElement('div'));
+            const copyValue =
+              typeof value === 'string'
+                ? value
+                : value === null
+                  ? 'null'
+                  : value === undefined
+                    ? 'undefined'
+                    : typeof value === 'boolean' || typeof value === 'number'
+                      ? String(value)
+                      : JSON.stringify(value);
+            onCopy(copyValue, document.createElement('div'));
           }}
           badgeVariant="enum"
           badgeSize="xs"

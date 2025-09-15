@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { FaCog, FaTimes } from 'react-icons/fa';
 import { DeckardOptions } from '../types';
 import { Button } from '../inputs';
+import { Tooltip } from './';
 import './Settings.styles.css';
 
 interface SettingsProps {
@@ -28,7 +29,7 @@ const Settings: React.FC<SettingsProps> = ({
   }, []);
 
   const handleOptionChange = useCallback(
-    (key: keyof DeckardOptions, value: boolean) => {
+    (key: keyof DeckardOptions, value: boolean | string) => {
       const newOptions = { [key]: value };
       onChange(newOptions);
 
@@ -36,10 +37,13 @@ const Settings: React.FC<SettingsProps> = ({
       if (typeof window !== 'undefined') {
         try {
           const storageKey = `deckard-settings-${siteKey}`;
+
           const existingSettings = JSON.parse(
             localStorage.getItem(storageKey) || '{}'
           );
+
           const updatedSettings = { ...existingSettings, [key]: value };
+
           localStorage.setItem(storageKey, JSON.stringify(updatedSettings));
         } catch (error) {
           console.warn('Failed to save settings to localStorage:', error);
@@ -60,16 +64,17 @@ const Settings: React.FC<SettingsProps> = ({
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="xs"
-        className="settings-trigger"
-        onClick={handleToggleOpen}
-        title="Schema display settings"
-        aria-label="Schema display settings"
-      >
-        <FaCog />
-      </Button>
+      <Tooltip title="Settings" content="Configure schema display options">
+        <Button
+          variant="ghost"
+          size="xs"
+          className="settings-trigger"
+          onClick={handleToggleOpen}
+          aria-label="Schema display settings"
+        >
+          <FaCog />
+        </Button>
+      </Tooltip>
 
       {isOpen && (
         <div className="settings-overlay" onClick={handleOverlayClick}>
@@ -147,7 +152,7 @@ const Settings: React.FC<SettingsProps> = ({
                   <label className="settings-option">
                     <input
                       type="checkbox"
-                      checked={options.searchable !== false}
+                      checked={Boolean(options.searchable) === true}
                       onChange={e =>
                         handleOptionChange('searchable', e.target.checked)
                       }
@@ -276,6 +281,80 @@ const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                   </label>
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h4 className="settings-section-title">Examples</h4>
+                <div className="settings-options">
+                  <div className="settings-option">
+                    <div className="settings-option-content">
+                      <div className="settings-option-text">
+                        <div className="settings-option-label">
+                          Default example language
+                        </div>
+                        <div className="settings-option-description">
+                          Choose the default format for code examples
+                        </div>
+                        <div style={{ marginTop: 'var(--schema-space-sm)' }}>
+                          <label className="settings-language-option">
+                            <input
+                              type="radio"
+                              name="defaultExampleLanguage"
+                              value="yaml"
+                              checked={
+                                options.defaultExampleLanguage === 'yaml'
+                              }
+                              onChange={() =>
+                                handleOptionChange(
+                                  'defaultExampleLanguage',
+                                  'yaml'
+                                )
+                              }
+                            />
+                            <div className="settings-checkbox"></div>
+                            <span>YAML</span>
+                          </label>
+                          <label className="settings-language-option">
+                            <input
+                              type="radio"
+                              name="defaultExampleLanguage"
+                              value="json"
+                              checked={
+                                options.defaultExampleLanguage === 'json'
+                              }
+                              onChange={() =>
+                                handleOptionChange(
+                                  'defaultExampleLanguage',
+                                  'json'
+                                )
+                              }
+                            />
+                            <div className="settings-checkbox"></div>
+                            <span>JSON</span>
+                          </label>
+                          <label className="settings-language-option">
+                            <input
+                              type="radio"
+                              name="defaultExampleLanguage"
+                              value="toml"
+                              checked={
+                                options.defaultExampleLanguage === 'toml'
+                              }
+                              onChange={() =>
+                                handleOptionChange(
+                                  'defaultExampleLanguage',
+                                  'toml'
+                                )
+                              }
+                            />
+                            <div className="settings-checkbox"></div>
+                            <span>TOML</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

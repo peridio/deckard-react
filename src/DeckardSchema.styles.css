@@ -8,6 +8,7 @@
   --schema-bg: transparent;
   --schema-surface: transparent;
   --schema-surface-hover: rgba(99, 152, 255, 0.04);
+  --schema-modal-bg: #ffffff;
   --schema-border: #e8e8e8;
   --schema-border-strong: #cbd5e1;
   --schema-border-subtle: rgba(0, 0, 0, 0.04);
@@ -80,6 +81,7 @@
     --schema-code-text: #e6edf3;
     --schema-accent-soft: rgba(59, 130, 246, 0.15);
     --schema-accent-hover: rgba(148, 204, 235, 0.08);
+    --schema-modal-bg: #ffffff;
   }
 }
 
@@ -132,6 +134,40 @@
   font-weight: 600;
   color: var(--schema-text);
   margin: var(--schema-space-lg) 0 var(--schema-space-sm);
+}
+
+/* ===== NO SEARCH RESULTS ===== */
+
+.schema-container .no-search-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--schema-space-xl) var(--schema-space-lg);
+  text-align: center;
+  border: 1px solid var(--schema-border);
+  border-radius: var(--schema-radius-md);
+  background: var(--schema-surface-hover);
+  margin: var(--schema-space-lg) 0;
+}
+
+.schema-container .no-search-results-icon {
+  font-size: 2rem;
+  margin-bottom: var(--schema-space-md);
+  opacity: 0.6;
+}
+
+.schema-container .no-search-results-message h3 {
+  margin: 0 0 var(--schema-space-sm) 0;
+  font-size: var(--schema-text-lg);
+  font-weight: 600;
+  color: var(--schema-text);
+}
+
+.schema-container .no-search-results-message p {
+  margin: 0;
+  font-size: var(--schema-text-sm);
+  color: var(--schema-text-muted);
+  line-height: 1.5;
 }
 
 /* ===== PROPERTIES SECTION ===== */
@@ -299,6 +335,149 @@
   .schema-container .schema-search {
     display: none;
   }
+
+  .schema-container .no-search-results {
+    display: none;
+  }
+}
+
+/* ===== LINK BUTTON ANCHOR STYLES ===== */
+
+.schema-container a.link-button,
+.schema-container a.row-button.link-button {
+  text-decoration: none;
+  color: var(--schema-text-muted);
+  display: inline-flex;
+}
+
+.schema-container a.link-button:hover,
+.schema-container a.row-button.link-button:hover {
+  text-decoration: none;
+  color: var(--schema-text);
+}
+
+/* Active route link button - red map pin */
+.schema-container a.link-button.active-route,
+.schema-container a.row-button.link-button.active-route,
+.schema-container .tooltip-trigger a.row-button.link-button.active-route {
+  color: var(--schema-danger);
+}
+
+.schema-container a.link-button.active-route:hover,
+.schema-container a.row-button.link-button.active-route:hover,
+.schema-container .tooltip-trigger a.row-button.link-button.active-route:hover {
+  color: var(--schema-danger);
+}
+
+.schema-container a.link-button:focus,
+.schema-container a.row-button.link-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--schema-accent-soft);
+  border-radius: var(--schema-radius-sm);
+}
+
+.schema-container a.link-button:visited,
+.schema-container a.row-button.link-button:visited {
+  color: var(--schema-text-muted);
+}
+
+/* ===== TOOLTIP SHIMMER EFFECT ===== */
+
+@keyframes tooltip-wiggle {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+  20% {
+    transform: translateX(2px) rotate(1deg);
+  }
+  30% {
+    transform: translateX(-1px) rotate(-0.5deg);
+  }
+  40% {
+    transform: translateX(1px) rotate(0.5deg);
+  }
+  50% {
+    transform: translateX(0) rotate(0deg);
+  }
+  60% {
+    transform: translateX(1px) rotate(0.3deg);
+  }
+  70% {
+    transform: translateX(-1px) rotate(-0.3deg);
+  }
+  80% {
+    transform: translateX(0.5px) rotate(0.2deg);
+  }
+  90% {
+    transform: translateX(-0.5px) rotate(-0.1deg);
+  }
+}
+
+@keyframes tooltip-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.3;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  30% {
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.25;
+  }
+  60% {
+    opacity: 0.2;
+  }
+  70% {
+    opacity: 0.15;
+  }
+  80% {
+    opacity: 0.1;
+  }
+  90% {
+    opacity: 0.05;
+  }
+}
+
+.tooltip-trigger {
+  position: relative;
+}
+
+.tooltips-shimmer .tooltip-trigger {
+  animation: tooltip-wiggle 1.2s ease-in-out infinite;
+}
+
+.tooltips-shimmer .tooltip-trigger::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 188, 212, 0.4) 0%,
+    rgba(0, 188, 212, 0.2) 30%,
+    rgba(0, 188, 212, 0.1) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  animation: tooltip-glow 1.2s ease-in-out infinite;
+  z-index: -1;
 }
 
 /* ===== ACCESSIBILITY ===== */
@@ -320,5 +499,10 @@
   .schema-container *::after {
     animation-duration: 0.01ms;
     transition-duration: 0.01ms;
+  }
+
+  /* Disable tooltip wiggle effect for users who prefer reduced motion */
+  .tooltips-shimmer .tooltip-trigger {
+    animation: none;
   }
 }

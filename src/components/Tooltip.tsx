@@ -14,6 +14,7 @@ import { useTooltipGlobalManager } from './TooltipGlobalManager';
 import './Tooltip.styles.css';
 
 export interface TooltipProps {
+  title: string;
   content: React.ReactNode;
   children: React.ReactNode;
   placement?: Placement;
@@ -31,6 +32,7 @@ export interface TooltipProps {
 }
 
 export const Tooltip: React.FC<TooltipProps> = ({
+  title,
   content,
   children,
   placement = 'top',
@@ -213,6 +215,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       if (
         refs.reference.current &&
         refs.floating.current &&
+        'contains' in refs.reference.current &&
         !refs.reference.current.contains(event.target as Node) &&
         !refs.floating.current.contains(event.target as Node)
       ) {
@@ -272,7 +275,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }, [context.middlewareData.arrow, context.placement]);
 
   const renderTooltip = () => {
-    if (!isVisible || disabled || !content) {
+    if (!isVisible || disabled || !title) {
       return null;
     }
 
@@ -313,17 +316,26 @@ export const Tooltip: React.FC<TooltipProps> = ({
             gap: '8px',
           }}
         >
-          <div style={{ flex: 1 }}>{content}</div>
-          {isPinned && (
-            <GiPin
-              size={14}
-              style={{
-                color: '#3b82f6',
-                flexShrink: 0,
-                marginTop: '1px',
-              }}
-            />
-          )}
+          <div style={{ flex: 1 }}>
+            <div>
+              <strong>{title}</strong>
+              {content && (
+                <>
+                  <br />
+                  {content}
+                </>
+              )}
+            </div>
+          </div>
+          <GiPin
+            size={14}
+            style={{
+              color: isPinned ? '#3b82f6' : '#cbd5e1',
+              flexShrink: 0,
+              marginTop: '1px',
+              opacity: isPinned ? 1 : 0.5,
+            }}
+          />
         </div>
         {showArrow && <div ref={arrowRef} style={getArrowStyles()} />}
       </div>

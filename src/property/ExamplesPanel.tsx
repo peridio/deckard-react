@@ -276,7 +276,10 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
                 onClick={e => {
                   if (onCopy) {
                     onCopy(code, e.currentTarget as HTMLElement);
-                  } else if (typeof window !== 'undefined') {
+                  } else if (
+                    typeof window !== 'undefined' &&
+                    typeof document !== 'undefined'
+                  ) {
                     navigator.clipboard.writeText(code).catch(() => {
                       // Fallback for older browsers
                       const textArea = document.createElement('textarea');

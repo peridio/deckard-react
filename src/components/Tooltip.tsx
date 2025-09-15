@@ -88,11 +88,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
 
     // Clear keyboard activity from other tooltips by dispatching custom event
-    document.dispatchEvent(
-      new CustomEvent('tooltip-keyboard-clear', {
-        detail: { excludeId: tooltipId },
-      })
-    );
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(
+        new CustomEvent('tooltip-keyboard-clear', {
+          detail: { excludeId: tooltipId },
+        })
+      );
+    }
 
     // Mark this tooltip as active for keyboard interactions
     setIsActiveForKeyboard(true);
@@ -167,7 +169,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     };
 
-    if (isVisible && isActiveForKeyboard) {
+    if (isVisible && isActiveForKeyboard && typeof document !== 'undefined') {
       document.addEventListener('keydown', handleKeyDown);
       return () => {
         document.removeEventListener('keydown', handleKeyDown);
@@ -183,16 +185,18 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     };
 
-    document.addEventListener(
-      'tooltip-keyboard-clear',
-      handleKeyboardClear as EventListener
-    );
-    return () => {
-      document.removeEventListener(
+    if (typeof document !== 'undefined') {
+      document.addEventListener(
         'tooltip-keyboard-clear',
         handleKeyboardClear as EventListener
       );
-    };
+      return () => {
+        document.removeEventListener(
+          'tooltip-keyboard-clear',
+          handleKeyboardClear as EventListener
+        );
+      };
+    }
   }, [tooltipId]);
 
   // Reset keyboard active state when tooltip becomes invisible
@@ -224,7 +228,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       }
     };
 
-    if (isPinned) {
+    if (isPinned && typeof document !== 'undefined') {
       document.addEventListener('keydown', handleKeyDown);
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
@@ -360,7 +364,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       >
         {children}
       </div>
-      {portal ? (
+      {portal && typeof document !== 'undefined' ? (
         <FloatingPortal root={document.body}>{renderTooltip()}</FloatingPortal>
       ) : (
         renderTooltip()

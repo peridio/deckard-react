@@ -62,7 +62,9 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
     const [isWrapped, setIsWrapped] = useState(false);
 
     const handleCopy = useCallback(() => {
-      onCopy(content, document.createElement('div'));
+      const element =
+        typeof document !== 'undefined' ? document.createElement('div') : null;
+      onCopy(content, element as HTMLElement);
     }, [content]);
 
     const toggleWrap = useCallback(() => {
@@ -266,7 +268,11 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                     : typeof value === 'boolean' || typeof value === 'number'
                       ? String(value)
                       : JSON.stringify(value);
-            onCopy(copyValue, document.createElement('div'));
+            const element =
+              typeof document !== 'undefined'
+                ? document.createElement('div')
+                : null;
+            onCopy(copyValue, element as HTMLElement);
           }}
           badgeVariant="enum"
           badgeSize="xs"

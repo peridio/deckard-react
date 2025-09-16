@@ -43,18 +43,11 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
       type: 'object',
       properties: {},
       required: [],
-      description: '',
     };
 
-    const descriptions: string[] = [];
     const allRequired = new Set<string>();
 
     resolvedOptions.forEach((option, _index) => {
-      // Collect descriptions
-      if (option.description) {
-        descriptions.push(option.description);
-      }
-
       // Merge properties
       if (option.properties) {
         merged.properties = {
@@ -85,11 +78,6 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
     // Set merged required fields
     merged.required = Array.from(allRequired);
 
-    // Combine descriptions
-    if (descriptions.length > 0) {
-      merged.description = descriptions.join(' ');
-    }
-
     return merged;
   }, [allOfOptions, rootSchema]);
 
@@ -99,12 +87,10 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
       return [];
     }
 
-    // Create unique path for allOf content
-    const allOfPath = [...propertyPath, 'allof'];
-
+    // Create path for allOf content without adding 'allof' segment to avoid it appearing in anchors
     const properties = extractProperties(
       mergedSchema,
-      allOfPath,
+      propertyPath,
       0,
       rootSchema,
       []
@@ -143,14 +129,6 @@ const AllOfSelector: React.FC<AllOfSelectorProps> = ({
   return (
     <div className="allof-selector">
       <div className="allof-content">
-        {mergedSchema.description && (
-          <div className="allof-description">
-            <div className="property-description-block">
-              {mergedSchema.description}
-            </div>
-          </div>
-        )}
-
         {/* Show merged properties using our standard Rows component */}
         {mergedProperties.length > 0 && (
           <div className="allof-properties">

@@ -29,6 +29,10 @@ export interface TooltipProps {
   maxWidth?: number;
   /** When true, makes the entire tooltip bounding box clickable, not just the trigger element */
   clickableBounds?: boolean;
+  /** Duration in ms to hold press before pinning tooltip (for mobile) */
+  longPressDuration?: number;
+  /** When true, prevents focus and click interactions - tooltip only shows on hover */
+  nonInteractive?: boolean;
 }
 
 export const Tooltip: React.FC<TooltipProps> = ({
@@ -46,19 +50,24 @@ export const Tooltip: React.FC<TooltipProps> = ({
   portal = true,
   maxWidth = 300,
   clickableBounds = false,
+  longPressDuration = 500,
+  nonInteractive = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [globalRevealOpen, setGlobalRevealOpen] = useState(false);
   const [isActiveForKeyboard, setIsActiveForKeyboard] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const arrowRef = useRef<HTMLDivElement>(null);
   const tooltipId = useId();
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
 
   // Hook into global tooltip manager for Cmd/Ctrl reveal
   const globalManager = useTooltipGlobalManager();
 
-  const isVisible = isHovered || isPinned || globalRevealOpen;
+  const isVisible = isHovered || isPinned || globalRevealOpen || isFocused;
 
   const { refs, floatingStyles, context } = useFloating({
     open: isVisible,
@@ -123,16 +132,82 @@ export const Tooltip: React.FC<TooltipProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
+    if (nonInteractive) {
+      return;
+    }
+
     e.stopPropagation();
-    if (isPinned) {
-      // If already pinned, unpin it
-      setIsPinned(false);
-    } else if (isHovered) {
-      // If tooltip is open by hover, pin it
-      setIsPinned(true);
-    } else {
-      // If tooltip is closed, open and pin it
-      setIsPinned(true);
+    // Only pin/unpin if this was not a long press (check if touch lasted less than long press duration)
+    const now = Date.now();
+    const touchDuration = now - touchStartTimeRef.current;
+
+    if (touchDuration > longPressDuration) {
+      // This was a long press, don't toggle pin state as it was already handled
+      return;
+    }
+
+    // Regular click - remove focus to prevent tooltip from staying open
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.blur();
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (nonInteractive) {
+      return;
+    }
+
+    // Prevent focus when clicking (but allow keyboard focus)
+    e.preventDefault();
+  };
+
+  const handleTouchStart = () => {
+    if (nonInteractive) {
+      return;
+    }
+
+    touchStartTimeRef.current = Date.now();
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+    }
+
+    longPressTimeoutRef.current = setTimeout(() => {
+      // Long press detected - pin the tooltip
+      if (isPinned) {
+        setIsPinned(false);
+      } else {
+        setIsPinned(true);
+      }
+    }, longPressDuration);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  };
+
+  const handleFocus = () => {
+    if (nonInteractive) {
+      return;
+    }
+
+    setIsFocused(true);
+  };
+
+  const handleBlur = (e: React.FocusEvent) => {
+    if (nonInteractive) {
+      return;
+    }
+
+    // Check if focus is moving to a child element
+    const currentTarget = e.currentTarget;
+    const relatedTarget = e.relatedTarget;
+
+    // If the new focus target is not within this tooltip, hide it
+    if (!currentTarget.contains(relatedTarget as Node)) {
+      setIsFocused(false);
     }
   };
 
@@ -238,11 +313,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, [isPinned, refs.reference, refs.floating]);
 
-  // Clean up timeout on unmount
+  // Clean up timeouts on unmount
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
+      }
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
       }
     };
   }, []);
@@ -312,6 +390,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
         onMouseEnter={clickableBounds ? handleMouseEnter : undefined}
         onMouseLeave={clickableBounds ? handleMouseLeave : undefined}
         onClick={clickableBounds ? handleClick : e => e.stopPropagation()}
+        onFocus={clickableBounds ? handleFocus : undefined}
+        onBlur={clickableBounds ? handleBlur : undefined}
+        tabIndex={clickableBounds ? 0 : undefined}
       >
         <div
           style={{
@@ -355,11 +436,20 @@ export const Tooltip: React.FC<TooltipProps> = ({
       <div
         ref={refs.setReference}
         className={`tooltip-trigger ${className}`.trim()}
-        style={{ display: 'inline-block', cursor: 'help' }}
+        style={{
+          display: 'inline-block',
+          cursor: nonInteractive ? 'default' : 'help',
+        }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={handleClick}
-        role="button"
+        onMouseDown={nonInteractive ? undefined : handleMouseDown}
+        onClick={nonInteractive ? undefined : handleClick}
+        onTouchStart={nonInteractive ? undefined : handleTouchStart}
+        onTouchEnd={nonInteractive ? undefined : handleTouchEnd}
+        onFocus={nonInteractive ? undefined : handleFocus}
+        onBlur={nonInteractive ? undefined : handleBlur}
+        role={nonInteractive ? undefined : 'button'}
+        tabIndex={nonInteractive ? undefined : 0}
         aria-describedby={isVisible ? tooltipId : undefined}
       >
         {children}

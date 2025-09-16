@@ -21,6 +21,7 @@ interface RowsProps {
   className?: string;
   options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
   searchQuery?: string;
+  examplesHidden?: boolean;
 }
 
 const Rows: React.FC<RowsProps> = ({
@@ -40,6 +41,7 @@ const Rows: React.FC<RowsProps> = ({
   className = '',
   options,
   searchQuery,
+  examplesHidden = false,
 }) => {
   const rowsClasses = ['properties-rows', className].filter(Boolean).join(' ');
 
@@ -62,13 +64,14 @@ const Rows: React.FC<RowsProps> = ({
             collapsible={collapsible}
             includeExamples={includeExamples}
             examplesOnFocusOnly={examplesOnFocusOnly}
-            propertyStates={propertyStates}
             rootSchema={rootSchema}
+            propertyStates={propertyStates}
             toggleProperty={toggleProperty}
             focusedProperty={focusedProperty}
             onFocusChange={onFocusChange}
             options={options}
             searchQuery={searchQuery}
+            examplesHidden={examplesHidden}
           />
         );
       })}

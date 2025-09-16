@@ -1,18 +1,14 @@
 .oneof-selector {
-  border: 1px solid var(--schema-border-subtle);
-  border-radius: var(--schema-radius);
-  background: var(--schema-surface-subtle);
   margin: var(--schema-space-sm) 0;
 }
 
 .oneof-tabs {
   display: flex;
   gap: var(--schema-space-xs);
-  padding: var(--schema-space-xs);
-  background: var(--schema-surface-muted);
-  border-bottom: 1px solid var(--schema-border-subtle);
-  border-radius: var(--schema-radius) var(--schema-radius) 0 0;
+  padding: 0;
+  background: transparent;
   flex-wrap: wrap;
+  margin-bottom: var(--schema-space-sm);
 }
 
 .oneof-tab {
@@ -28,6 +24,10 @@
   min-height: 2.5rem;
 }
 
+.oneof-tab:active .badge {
+  transform: scale(0.95);
+}
+
 .schema-container .oneof-tab .badge {
   cursor: pointer;
 }
@@ -36,8 +36,60 @@
   transform: scale(1.05);
 }
 
-.oneof-tab:active .badge {
-  transform: scale(0.95);
+/* Search hit status for oneof tabs and badges */
+.oneof-tab.search-hit {
+  position: relative;
+}
+
+/* Badge search hit styling */
+.schema-container .oneof-tab .badge.search-hit {
+  position: relative;
+}
+
+.schema-container .oneof-tab .badge.search-hit::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.schema-container .oneof-tab .badge.search-hit.direct-hit::after {
+  background: var(--schema-border-focus);
+  box-shadow: 0 0 0 1px white;
+}
+
+.schema-container .oneof-tab .badge.search-hit.indirect-hit::after {
+  background: var(--schema-border-focus);
+  box-shadow: 0 0 0 1px white;
+}
+
+.schema-container .oneof-tab .badge.search-hit.both-hit::after {
+  background: var(--schema-border-focus);
+  box-shadow: 0 0 0 1px white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .schema-container .oneof-tab .badge.search-hit.both-hit::after {
+    animation: none;
+  }
 }
 
 .oneof-tab:focus {
@@ -68,8 +120,8 @@
 }
 
 .oneof-content {
-  padding: var(--schema-space-md);
-  background: var(--schema-surface);
+  padding: 0;
+  background: transparent;
 }
 
 .oneof-description {
@@ -80,10 +132,10 @@
   font-size: var(--schema-text-base);
   color: var(--schema-text-secondary);
   line-height: 1.5;
-  padding: var(--schema-space-sm);
-  background: var(--schema-surface-subtle);
-  border: 1px solid var(--schema-border-subtle);
-  border-radius: var(--schema-radius-sm);
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .oneof-properties h4 {
@@ -126,15 +178,6 @@
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
-  .oneof-selector {
-    background: var(--schema-surface-subtle);
-    border-color: var(--schema-border-subtle);
-  }
-
-  .oneof-tabs {
-    background: var(--schema-surface-muted);
-  }
-
   .oneof-property-item .property-name {
     background: var(--schema-surface-muted);
     color: var(--schema-text);
@@ -143,10 +186,6 @@
 
 /* High contrast mode */
 @media (prefers-contrast: high) {
-  .oneof-selector {
-    border-width: 2px;
-  }
-
   .oneof-tab {
     border-width: 2px;
   }

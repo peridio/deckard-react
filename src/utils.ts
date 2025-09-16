@@ -30,13 +30,76 @@ export function resolveSchema(
     const resolved = resolveReference(schema.$ref, rootSchema);
     if (resolved) {
       const { $ref: _$ref, ...rest } = schema;
-      return {
+      const result = {
         ...resolved,
         ...rest,
         description: schema.description || resolved.description,
+        // Preserve original $ref for enum ID extraction
+        __originalRef: schema.$ref,
       };
+
+      // If the resolved schema has allOf, recursively process it
+      if (result.allOf) {
+        return resolveSchema(result, rootSchema);
+      }
+
+      return result;
     }
   }
+
+  // Handle allOf schemas by merging all schemas
+  if (schema.allOf) {
+    const merged: JsonSchema = { ...schema };
+
+    // Remove allOf from the merged schema
+    delete merged.allOf;
+
+    // Merge all schemas in allOf
+    schema.allOf.forEach(subSchema => {
+      const resolvedSubSchema = resolveSchema(subSchema, rootSchema);
+
+      // Merge properties
+      if (resolvedSubSchema.properties) {
+        merged.properties = {
+          ...merged.properties,
+          ...resolvedSubSchema.properties,
+        };
+      }
+
+      // Merge patternProperties
+      if (resolvedSubSchema.patternProperties) {
+        merged.patternProperties = {
+          ...merged.patternProperties,
+          ...resolvedSubSchema.patternProperties,
+        };
+      }
+
+      // Merge required arrays
+      if (resolvedSubSchema.required) {
+        merged.required = [
+          ...(merged.required || []),
+          ...resolvedSubSchema.required,
+        ];
+      }
+
+      // Merge other properties (like type, description, etc.)
+      Object.keys(resolvedSubSchema).forEach(key => {
+        if (
+          key !== 'properties' &&
+          key !== 'patternProperties' &&
+          key !== 'required'
+        ) {
+          if (merged[key as keyof JsonSchema] === undefined) {
+            (merged as Record<string, unknown>)[key] =
+              resolvedSubSchema[key as keyof JsonSchema];
+          }
+        }
+      });
+    });
+
+    return merged;
+  }
+
   return schema;
 }
 
@@ -81,12 +144,17 @@ export function extractProperties(
     });
   }
 
-  // Handle pattern properties
-  if (resolvedSchema.patternProperties) {
+  // Handle pattern properties (but not if they're inside oneOf/anyOf constructs)
+
+  if (
+    resolvedSchema.patternProperties &&
+    !resolvedSchema.oneOf &&
+    !resolvedSchema.anyOf
+  ) {
     Object.entries(resolvedSchema.patternProperties).forEach(
       ([pattern, propSchema], index) => {
-        // Create unique path using pattern hash to avoid conflicts
-        const patternKey = `__pattern_${index}_${pattern.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        // Use (pattern-index) format for pattern property keys
+        const patternKey = `(pattern-${index})`;
         const currentPath = [...path, patternKey];
         const patternPathKey = currentPath.join('.');
 
@@ -108,7 +176,7 @@ export function extractProperties(
         };
 
         properties.push({
-          name: `{name}`,
+          name: `{pattern}`,
           schema: syntheticSchema,
           required: false, // Pattern properties are never required individually
           path: currentPath,
@@ -285,4 +353,175 @@ export function getUnsupportedFeatures(schema: JsonSchema): string[] {
   }
 
   return unsupported;
+}
+
+// Helper function to recursively search through schema structures
+export function searchInSchema(
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  query: string,
+  searchIncludesExamples: boolean = false,
+  propertyName?: string,
+  visited: Set<JsonSchema> = new Set(),
+  depth: number = 0
+): boolean {
+  // Prevent infinite recursion
+  if (depth > 10 || visited.has(schema)) {
+    return false;
+  }
+  visited.add(schema);
+  const queryLower = query.toLowerCase();
+
+  // Check property name
+  if (propertyName && propertyName.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check description
+  if (schema.description?.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check type
+  if (getSchemaType(schema, rootSchema).toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check examples (only if enabled)
+  if (
+    searchIncludesExamples &&
+    schema.examples?.some(example => {
+      const exampleText =
+        typeof example === 'string' ? example : JSON.stringify(example);
+      return exampleText.toLowerCase().includes(queryLower);
+    })
+  ) {
+    return true;
+  }
+
+  const resolved = resolveSchema(schema, rootSchema);
+
+  // Check properties
+  if (resolved.properties) {
+    for (const [propName, propSchema] of Object.entries(resolved.properties)) {
+      if (
+        searchInSchema(
+          propSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          propName,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check pattern properties
+  if (resolved.patternProperties) {
+    for (const [_pattern, propSchema] of Object.entries(
+      resolved.patternProperties
+    )) {
+      if (
+        searchInSchema(
+          propSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check oneOf
+  if (resolved.oneOf) {
+    for (const subSchema of resolved.oneOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check allOf
+  if (resolved.allOf) {
+    for (const subSchema of resolved.allOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check anyOf
+  if (resolved.anyOf) {
+    for (const subSchema of resolved.anyOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Converts a URL hash to a property key, properly handling pattern properties.
+ * Example: "sdk-(pattern-0)" -> "sdk.(pattern-0)"
+ */
+export function hashToPropertyKey(hash: string): string {
+  if (!hash) return '';
+
+  // Remove leading # if present
+  const cleanHash = hash.startsWith('#') ? hash.substring(1) : hash;
+
+  // Handle pattern properties: preserve dashes within parentheses
+  return cleanHash.replace(/-(?![^(]*\))/g, '.');
+}
+
+/**
+ * Converts a property key to a URL hash, properly handling pattern properties.
+ * Example: "sdk.(pattern-0)" -> "sdk-(pattern-0)"
+ */
+export function propertyKeyToHash(propertyKey: string): string {
+  if (!propertyKey) return '';
+
+  // Handle pattern properties: preserve dots within parentheses, convert others to dashes
+  return propertyKey.replace(/\.(?![^(]*\))/g, '-');
 }

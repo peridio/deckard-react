@@ -131,7 +131,6 @@ export const propertyRowStyles = `
   color: var(--schema-text-secondary);
   font-size: var(--schema-text-base);
   line-height: 1.5;
-  margin-bottom: var(--schema-space-md);
 }
 
 .schema-container .schema-details .property-description-block:only-child {

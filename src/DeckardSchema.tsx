@@ -18,11 +18,275 @@ import './property/CodeSnippet.styles.css';
 import './property/ExamplesPanel.styles.css';
 import './Rows.styles.css';
 import './components/Settings.styles.css';
+import './components/Modal.styles.css';
+import './components/KeyboardModal.styles.css';
 import './inputs/RadioGroup.styles.css';
-import { extractProperties, getSchemaType, resolveSchema } from './utils';
+import {
+  extractProperties,
+  getSchemaType,
+  resolveSchema,
+  hashToPropertyKey,
+  propertyKeyToHash,
+} from './utils';
 import Rows from './Rows';
 import { Input } from './inputs';
-import { Settings } from './components';
+import { Settings, KeyboardModal, Tooltip } from './components';
+import { FaKeyboard } from 'react-icons/fa';
+
+// Helper function to check only direct property matches (not nested)
+function isDirectPropertyMatch(
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  query: string,
+  searchIncludesExamples: boolean = false,
+  propertyName?: string,
+  visited: Set<JsonSchema> = new Set(),
+  depth: number = 0
+): boolean {
+  // Prevent infinite recursion
+  if (depth > 10 || visited.has(schema)) {
+    return false;
+  }
+  visited.add(schema);
+  const queryLower = query.toLowerCase();
+
+  // Resolve schema first to handle $ref definitions
+  const resolved = resolveSchema(schema, rootSchema);
+
+  // Check property name
+  if (propertyName && propertyName.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check description (use resolved schema to handle $ref)
+  if (resolved.description?.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check type
+  if (getSchemaType(resolved, rootSchema).toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check examples (only if enabled) (use resolved schema to handle $ref)
+  if (
+    searchIncludesExamples &&
+    resolved.examples?.some(example => {
+      const exampleText =
+        typeof example === 'string' ? example : JSON.stringify(example);
+      return exampleText.toLowerCase().includes(queryLower);
+    })
+  ) {
+    return true;
+  }
+
+  // Check oneOf options for direct matches (these are part of the property's definition)
+  if (resolved.oneOf) {
+    for (let i = 0; i < resolved.oneOf.length; i++) {
+      const subSchema = resolved.oneOf[i];
+
+      if (
+        isDirectPropertyMatch(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check allOf options for direct matches
+  if (resolved.allOf) {
+    for (const subSchema of resolved.allOf) {
+      if (
+        isDirectPropertyMatch(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check anyOf options for direct matches
+  if (resolved.anyOf) {
+    for (const subSchema of resolved.anyOf) {
+      if (
+        isDirectPropertyMatch(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// Helper function to recursively search through schema structures
+function searchInSchema(
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  query: string,
+  searchIncludesExamples: boolean = false,
+  propertyName?: string,
+  visited: Set<JsonSchema> = new Set(),
+  depth: number = 0
+): boolean {
+  // Prevent infinite recursion
+  if (depth > 10 || visited.has(schema)) {
+    return false;
+  }
+  visited.add(schema);
+  const queryLower = query.toLowerCase();
+
+  // Check property name
+  if (propertyName && propertyName.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check description
+  if (schema.description?.toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check type
+  if (getSchemaType(schema, rootSchema).toLowerCase().includes(queryLower)) {
+    return true;
+  }
+
+  // Check examples (only if enabled)
+  if (
+    searchIncludesExamples &&
+    schema.examples?.some(example => {
+      const exampleText =
+        typeof example === 'string' ? example : JSON.stringify(example);
+      return exampleText.toLowerCase().includes(queryLower);
+    })
+  ) {
+    return true;
+  }
+
+  const resolved = resolveSchema(schema, rootSchema);
+
+  // Check properties
+  if (resolved.properties) {
+    for (const [propName, propSchema] of Object.entries(resolved.properties)) {
+      if (
+        searchInSchema(
+          propSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          propName,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check pattern properties
+  if (resolved.patternProperties) {
+    for (const [_pattern, propSchema] of Object.entries(
+      resolved.patternProperties
+    )) {
+      if (
+        searchInSchema(
+          propSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check oneOf
+  if (resolved.oneOf) {
+    for (const subSchema of resolved.oneOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check allOf
+  if (resolved.allOf) {
+    for (const subSchema of resolved.allOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  // Check anyOf
+  if (resolved.anyOf) {
+    for (const subSchema of resolved.anyOf) {
+      if (
+        searchInSchema(
+          subSchema,
+          rootSchema,
+          query,
+          searchIncludesExamples,
+          undefined,
+          visited,
+          depth + 1
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 interface DeckardSchemaProps {
   schema: JsonSchema;
@@ -37,6 +301,7 @@ const DEFAULT_OPTIONS: DeckardOptions = {
   includeExamples: false,
   examplesOnFocusOnly: true,
   searchable: true,
+  searchIncludesExamples: false,
   collapsible: true,
   autoExpand: false,
   theme: 'auto',
@@ -158,6 +423,8 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     results: 0,
   });
   const [focusedProperty, setFocusedProperty] = useState<string | null>(null);
+  const [keyboardModalOpen, setKeyboardModalOpen] = useState(false);
+  const [examplesHidden, setExamplesHidden] = useState(false);
 
   const properties = useMemo(() => {
     const props = extractProperties(schema, [], 0, schema, []);
@@ -168,31 +435,21 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
   const filteredProperties = useMemo(() => {
     if (!searchState.query) return properties;
 
-    const query = searchState.query.toLowerCase();
-
     return properties.filter(prop => {
-      // Search field names
-      if (prop.name.toLowerCase().includes(query)) return true;
-
-      // Search descriptions
-      if (prop.schema.description?.toLowerCase().includes(query)) return true;
-
-      // Search schema type
-      if (getSchemaType(prop.schema, schema).toLowerCase().includes(query))
-        return true;
-
-      // Search examples
-      if (prop.schema.examples) {
-        for (const example of prop.schema.examples) {
-          const exampleText =
-            typeof example === 'string' ? example : JSON.stringify(example);
-          if (exampleText.toLowerCase().includes(query)) return true;
-        }
-      }
-
-      return false;
+      return searchInSchema(
+        prop.schema,
+        schema,
+        searchState.query,
+        currentOptions.searchIncludesExamples || false,
+        prop.name
+      );
     });
-  }, [properties, searchState.query, schema]);
+  }, [
+    properties,
+    searchState.query,
+    schema,
+    currentOptions.searchIncludesExamples,
+  ]);
 
   // Initialize property states - all properties are expandable now
   // Initialize property states for all properties including nested ones
@@ -209,6 +466,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
       properties.forEach(property => {
         const key = property.path.join('.');
+
         newStates[key] = {
           expanded: Boolean(autoExpand),
           hasDetails: true, // All fields are expandable now
@@ -218,9 +476,12 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         };
 
         // Recursively initialize nested properties
-        if (property.schema.properties || property.schema.patternProperties) {
+        // Resolve the schema to handle $ref and allOf
+        const resolvedSchema = resolveSchema(property.schema, rootSchema);
+
+        if (resolvedSchema.properties || resolvedSchema.patternProperties) {
           initializePropertyStates(
-            property.schema,
+            resolvedSchema,
             property.path,
             depth + 1,
             rootSchema
@@ -233,13 +494,13 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     initializePropertyStates(schema, [], 0, schema);
 
     setPropertyStates(newStates);
-  }, [schema, autoExpand, searchState.query]);
+  }, [schema, autoExpand]);
 
   // Handle URL hash navigation - only on mount
   useEffect(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     if (hash) {
-      const fieldKey = hash.substring(1).replace(/-/g, '.');
+      const fieldKey = hashToPropertyKey(hash);
 
       // Update property states to expand path to target
       setPropertyStates(prev => {
@@ -247,12 +508,22 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
         // Expand all parent paths to make the target field visible
         const pathParts = fieldKey.split('.');
+
         for (let i = 1; i <= pathParts.length; i++) {
           const parentPath = pathParts.slice(0, i).join('.');
+
           if (newStates[parentPath]) {
             newStates[parentPath] = {
               ...newStates[parentPath],
               expanded: true,
+            };
+          } else {
+            newStates[parentPath] = {
+              expanded: true,
+              hasDetails: true,
+              matchesSearch: true,
+              isDirectMatch: false,
+              hasNestedMatches: false,
             };
           }
         }
@@ -267,9 +538,12 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
       setTimeout(() => {
         if (typeof document !== 'undefined') {
           const targetElement = document.getElementById(
-            fieldKey.replace(/\./g, '-')
+            propertyKeyToHash(fieldKey)
           );
-          if (targetElement) {
+          if (
+            targetElement &&
+            typeof targetElement.scrollIntoView === 'function'
+          ) {
             targetElement.scrollIntoView({
               behavior: 'smooth',
               block: 'start',
@@ -321,39 +595,66 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
           }
         });
 
-        // Then find and mark direct matches
+        // Find all properties with any matches (direct or nested)
+        const allMatches = new Set<string>();
         const directMatches = new Set<string>();
+
         Object.keys(newStates).forEach(key => {
           const pathSegments = key.split('.');
 
-          // Find the property in the schema to check for matches
-          let currentSchema = schema;
+          // Find the property in the schema
+          let currentSchema = resolveSchema(schema, schema);
+          let propertyName = '';
 
           for (let i = 0; i < pathSegments.length; i++) {
             const segment = pathSegments[i];
-            if (currentSchema.properties?.[segment]) {
-              currentSchema = currentSchema.properties[segment];
-              if (i === pathSegments.length - 1) {
-                // Check if this property matches search
-                const matches =
-                  segment.toLowerCase().includes(queryLower) ||
-                  currentSchema.description
-                    ?.toLowerCase()
-                    .includes(queryLower) ||
-                  getSchemaType(currentSchema, schema)
-                    .toLowerCase()
-                    .includes(queryLower) ||
-                  (currentSchema.examples &&
-                    currentSchema.examples.some(example => {
-                      const exampleText =
-                        typeof example === 'string'
-                          ? example
-                          : JSON.stringify(example);
-                      return exampleText.toLowerCase().includes(queryLower);
-                    })) ||
-                  false;
 
-                if (matches) {
+            // Handle pattern properties
+            if (segment.startsWith('(pattern-') && segment.endsWith(')')) {
+              if (currentSchema.patternProperties) {
+                const patternEntries = Object.entries(
+                  currentSchema.patternProperties
+                );
+                const patternIndex = parseInt(
+                  segment.match(/\(pattern-(\d+)\)/)?.[1] || '0'
+                );
+                if (patternEntries[patternIndex]) {
+                  const [_pattern, patternSchema] =
+                    patternEntries[patternIndex];
+                  currentSchema = resolveSchema(patternSchema, schema);
+                  propertyName = '{pattern}';
+                }
+              }
+            } else if (currentSchema.properties?.[segment]) {
+              currentSchema = resolveSchema(
+                currentSchema.properties[segment],
+                schema
+              );
+              propertyName = segment;
+            }
+
+            if (i === pathSegments.length - 1) {
+              // Check if this property has any matches (direct or nested)
+              if (
+                searchInSchema(
+                  currentSchema,
+                  schema,
+                  queryLower,
+                  currentOptions.searchIncludesExamples || false,
+                  propertyName
+                )
+              ) {
+                allMatches.add(key);
+
+                // Check if it's also a direct match
+                const isDirect = isDirectPropertyMatch(
+                  currentSchema,
+                  schema,
+                  queryLower,
+                  currentOptions.searchIncludesExamples || false,
+                  propertyName
+                );
+                if (isDirect) {
                   directMatches.add(key);
                 }
               }
@@ -361,28 +662,48 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
           }
         });
 
-        // Mark direct matches and propagate up parent chain
-
-        directMatches.forEach(matchKey => {
-          // Mark the direct match
+        // Mark all matches and determine their type
+        allMatches.forEach(matchKey => {
           if (newStates[matchKey]) {
+            const isDirect = directMatches.has(matchKey);
+
+            // Check if this property has nested matches by looking for child properties in allMatches
+            const hasChildMatches = Array.from(allMatches).some(
+              otherKey =>
+                otherKey !== matchKey && otherKey.startsWith(matchKey + '.')
+            );
+
+            // Classification logic with debug output for dependencies
+
             newStates[matchKey] = {
               ...newStates[matchKey],
-              expanded: true,
+              expanded: false,
               matchesSearch: true,
-              isDirectMatch: true,
+              isDirectMatch: isDirect,
+              hasNestedMatches: hasChildMatches,
             };
           }
+        });
 
-          // Propagate up the parent chain
+        // Propagate nested matches up parent chain
+        allMatches.forEach(matchKey => {
           const pathSegments = matchKey.split('.');
           for (let i = pathSegments.length - 1; i > 0; i--) {
             const parentKey = pathSegments.slice(0, i).join('.');
-            if (newStates[parentKey]) {
+            if (newStates[parentKey] && !allMatches.has(parentKey)) {
+              // Parent doesn't have its own matches, so mark it as having nested matches only
               newStates[parentKey] = {
                 ...newStates[parentKey],
-                expanded: true,
+                expanded: false,
                 matchesSearch: true,
+                hasNestedMatches: true,
+                isDirectMatch: false,
+              };
+              allMatches.add(parentKey); // Add to allMatches to continue propagating up
+            } else if (newStates[parentKey] && directMatches.has(parentKey)) {
+              // Parent has direct matches, so it should be both-hit
+              newStates[parentKey] = {
+                ...newStates[parentKey],
                 hasNestedMatches: true,
               };
             }
@@ -407,7 +728,13 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         setPropertyStates(newStates);
       }
     },
-    [propertyStates, collapsible, schema, autoExpand]
+    [
+      propertyStates,
+      collapsible,
+      schema,
+      autoExpand,
+      currentOptions.searchIncludesExamples,
+    ]
   );
 
   const expandAll = useCallback(() => {
@@ -461,7 +788,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         const isInView = rect.top >= 0 && rect.bottom <= viewportHeight;
 
         // Only scroll if the element is not fully visible
-        if (!isInView) {
+        if (!isInView && typeof element.scrollIntoView === 'function') {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
@@ -495,21 +822,23 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
           schema,
           []
         );
+
         allNestedProps.push(...nested);
 
         // Then, collect allOf properties if they exist
         if (prop.schema.allOf) {
-          prop.schema.allOf.forEach(allOfSchema => {
+          prop.schema.allOf.forEach((allOfSchema, _index) => {
             const resolvedSchema = resolveSchema(allOfSchema, schema);
+
             if (resolvedSchema.properties || resolvedSchema.patternProperties) {
-              const allOfPath = [...prop.path, 'allof'];
               const allOfProps = extractProperties(
                 resolvedSchema,
-                allOfPath,
+                prop.path,
                 prop.depth + 1,
                 schema,
                 []
               );
+
               allNestedProps.push(...allOfProps);
             }
           });
@@ -663,8 +992,8 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         e.stopPropagation();
       }
 
-      // Search shortcut: Shift + /
-      if (e.key === '?' && e.shiftKey) {
+      // Search shortcut: s
+      if (e.key === 's' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         e.preventDefault();
         if (typeof document !== 'undefined') {
           const searchInput = document.querySelector(
@@ -694,9 +1023,27 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
       }
 
       // Collapse all: Ctrl/Cmd + Shift + E
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'E') {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        (e.key === 'E' || e.key === 'e')
+      ) {
         e.preventDefault();
         collapseAll();
+      }
+
+      // Toggle examples visibility: e
+      if (e.key === 'e' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault();
+        setExamplesHidden(prev => !prev);
+        return;
+      }
+
+      // Open keyboard shortcuts: Shift + ?
+      if (e.key === '?' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setKeyboardModalOpen(true);
+        return;
       }
 
       // Clear search: Escape
@@ -802,7 +1149,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
         return;
       }
 
-      const anchor = `#${propertyKey}`;
+      const anchor = `#${propertyKeyToHash(propertyKey)}`;
       const url = `${window.location.origin}${window.location.pathname}${anchor}`;
 
       // Update the URL in the address bar (this will trigger native browser scrolling)
@@ -855,6 +1202,14 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     []
   );
 
+  const handleKeyboardModalToggle = useCallback(() => {
+    setKeyboardModalOpen(prev => !prev);
+  }, []);
+
+  const handleKeyboardModalClose = useCallback(() => {
+    setKeyboardModalOpen(false);
+  }, []);
+
   return (
     <TooltipGlobalManagerProvider>
       <>
@@ -870,28 +1225,56 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
           {includePropertiesTitle && (
             <div className="properties-header">
               <h2>Properties</h2>
-              <Settings
-                options={currentOptions}
-                onChange={handleSettingsChange}
-                siteKey={
-                  typeof window !== 'undefined'
-                    ? window.location.hostname
-                    : 'default'
-                }
-              />
+              <div className="header-controls">
+                <Tooltip
+                  title="Keyboard shortcuts"
+                  content="View available keyboard shortcuts for navigation and controls"
+                >
+                  <button
+                    className="keyboard-button"
+                    onClick={handleKeyboardModalToggle}
+                    aria-label="View keyboard shortcuts"
+                  >
+                    <FaKeyboard />
+                  </button>
+                </Tooltip>
+                <Settings
+                  options={currentOptions}
+                  onChange={handleSettingsChange}
+                  siteKey={
+                    typeof window !== 'undefined'
+                      ? window.location.hostname
+                      : 'default'
+                  }
+                />
+              </div>
             </div>
           )}
           {!includePropertiesTitle && (
             <div className="settings-only-header">
-              <Settings
-                options={currentOptions}
-                onChange={handleSettingsChange}
-                siteKey={
-                  typeof window !== 'undefined'
-                    ? window.location.hostname
-                    : 'default'
-                }
-              />
+              <div className="header-controls">
+                <Tooltip
+                  title="Keyboard shortcuts"
+                  content="View available keyboard shortcuts for navigation and controls"
+                >
+                  <button
+                    className="keyboard-button"
+                    onClick={handleKeyboardModalToggle}
+                    aria-label="View keyboard shortcuts"
+                  >
+                    <FaKeyboard />
+                  </button>
+                </Tooltip>
+                <Settings
+                  options={currentOptions}
+                  onChange={handleSettingsChange}
+                  siteKey={
+                    typeof window !== 'undefined'
+                      ? window.location.hostname
+                      : 'default'
+                  }
+                />
+              </div>
             </div>
           )}
 
@@ -901,7 +1284,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
                 type="search"
                 variant="search"
                 size="md"
-                placeholder="Search properties... (press Shift+/)"
+                placeholder="Search properties... (press 's')"
                 value={searchState.query}
                 onChange={e => handleSearch(e.target.value)}
                 tabIndex={1}
@@ -942,6 +1325,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
                   defaultExampleLanguage: currentOptions.defaultExampleLanguage,
                 }}
                 searchQuery={searchState.query}
+                examplesHidden={examplesHidden}
               />
             )}
           </div>
@@ -963,6 +1347,11 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
               ))}
             </div>
           )}
+          <KeyboardModal
+            isOpen={keyboardModalOpen}
+            onClose={handleKeyboardModalClose}
+            examplesHidden={examplesHidden}
+          />
         </div>
       </>
     </TooltipGlobalManagerProvider>

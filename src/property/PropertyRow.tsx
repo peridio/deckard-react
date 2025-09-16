@@ -4,11 +4,18 @@ import {
   FaLink,
   FaChevronDown,
   FaChevronRight,
-  FaSearch,
+  FaEyeSlash,
 } from 'react-icons/fa';
+import { FaFolder, FaFolderOpen, FaSitemap } from 'react-icons/fa';
 import './PropertyRow.styles.css';
 import { SchemaProperty, PropertyState, JsonSchema } from '../types';
-import { getSchemaType, hasExamples, extractProperties } from '../utils';
+import {
+  getSchemaType,
+  hasExamples,
+  extractProperties,
+  hashToPropertyKey,
+  propertyKeyToHash,
+} from '../utils';
 import ExamplesPanel from './ExamplesPanel';
 import { Badge, Tooltip } from '../components';
 import Row from '../Row';
@@ -45,6 +52,50 @@ const getTypeDescription = (type: string): string => {
   }
 };
 
+const getEnumId = (schema: JsonSchema): string | null => {
+  // Check for preserved original $ref (from resolved schemas)
+  if (schema.__originalRef && typeof schema.__originalRef === 'string') {
+    const match = schema.__originalRef.match(/#\/definitions\/(.+)$/);
+    if (match && match[1].trim()) {
+      return match[1];
+    }
+  }
+
+  // Check for direct $ref (unresolved schemas)
+  if (schema.$ref && typeof schema.$ref === 'string') {
+    const match = schema.$ref.match(/#\/definitions\/(.+)$/);
+    if (match && match[1].trim()) {
+      return match[1];
+    }
+  }
+
+  return null;
+};
+
+const getEnumDescription = (
+  schema: JsonSchema,
+  rootSchema?: JsonSchema
+): string => {
+  // If schema has preserved __originalRef or $ref, resolve it to get the description
+  const refToUse = schema.__originalRef || schema.$ref;
+  if (refToUse && rootSchema) {
+    const enumId = getEnumId(schema);
+    if (enumId && rootSchema.definitions && rootSchema.definitions[enumId]) {
+      const resolvedSchema = rootSchema.definitions[enumId];
+      if (resolvedSchema.description) {
+        return resolvedSchema.description;
+      }
+    }
+  }
+
+  // Fallback to direct schema description
+  if (schema.description) {
+    return schema.description;
+  }
+
+  return 'No description provided for this enumerated type.';
+};
+
 interface PropertyRowProps {
   property: SchemaProperty;
   propertyKey: string;
@@ -62,6 +113,7 @@ interface PropertyRowProps {
   onFocusChange?: (propertyKey: string | null) => void;
   options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
   searchQuery?: string;
+  examplesHidden?: boolean;
 }
 
 const PropertyRow: React.FC<PropertyRowProps> = ({
@@ -81,6 +133,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   onFocusChange,
   options,
   searchQuery,
+  examplesHidden = false,
 }) => {
   const [isActiveRoute, setIsActiveRoute] = useState(false);
 
@@ -88,8 +141,16 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   const hasValidSchema = property.schema != null;
 
   // Extract nested properties if this property has them
+  // Skip extraction if schema has oneOf/allOf as these are handled by selectors
   const nestedProperties = useMemo(() => {
     if (!rootSchema || !hasValidSchema) return [];
+
+    // Don't extract nested properties if schema has oneOf or allOf
+    // as these are already handled by OneOfSelector/AllOfSelector components
+    if (property.schema.oneOf || property.schema.allOf) {
+      return [];
+    }
+
     const props = extractProperties(
       property.schema,
       property.path,
@@ -97,6 +158,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
       rootSchema,
       []
     );
+
     // Sort nested properties alphabetically by name
     return props.sort((a: SchemaProperty, b: SchemaProperty) =>
       a.name.localeCompare(b.name)
@@ -118,8 +180,10 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
     }
 
     const checkActiveRoute = () => {
-      const hash = window.location.hash.replace('#', '');
-      setIsActiveRoute(hash === propertyKey);
+      const hash = window.location.hash;
+      // Convert hash format to property key format, properly handling pattern properties
+      const fieldKey = hashToPropertyKey(hash);
+      setIsActiveRoute(fieldKey === propertyKey);
     };
 
     checkActiveRoute();
@@ -183,7 +247,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   // Generate the anchor URL for the link
   const linkHref = useMemo(() => {
     if (typeof window === 'undefined') return '#';
-    const anchor = `#${propertyKey}`;
+    const anchor = `#${propertyKeyToHash(propertyKey)}`;
     return `${window.location.origin}${window.location.pathname}${anchor}`;
   }, [propertyKey]);
 
@@ -260,7 +324,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   return (
     <Row
       className={`${propertyClasses} ${focusedProperty === propertyKey ? 'focused' : ''}`}
-      id={propertyKey.replace(/\./g, '-')}
+      id={propertyKeyToHash(propertyKey)}
       data-property-key={propertyKey}
       onClick={handleFieldClick}
     >
@@ -290,22 +354,54 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
                   ? 'Direct and nested search match'
                   : state.isDirectMatch
                     ? 'Direct search match'
-                    : 'Contains search match'
+                    : 'Indirect search match'
               }
               content={
                 state.isDirectMatch && state.hasNestedMatches
                   ? 'This property matches your search query and also contains nested matches.'
                   : state.isDirectMatch
                     ? 'This property matches your search query.'
-                    : 'This property contains nested matches for your search.'
+                    : 'This property has nested properties that match your search.'
               }
               placement="top"
             >
               <span
-                className={`row-button search-hit-indicator ${!state.isDirectMatch ? 'parent-match' : ''}`}
-                aria-label={`${property.name} ${state.isDirectMatch ? 'matches' : 'contains'} current search`}
+                className={`row-button search-hit-indicator ${
+                  state.isDirectMatch && state.hasNestedMatches
+                    ? 'both-hit'
+                    : state.isDirectMatch
+                      ? 'direct-hit'
+                      : 'indirect-hit'
+                }`}
+                aria-label={`${property.name} ${
+                  state.isDirectMatch && state.hasNestedMatches
+                    ? 'matches search and contains nested matches'
+                    : state.isDirectMatch
+                      ? 'matches current search'
+                      : 'contains nested search matches'
+                }`}
               >
-                <FaSearch />
+                {state.isDirectMatch && state.hasNestedMatches ? (
+                  <FaSitemap />
+                ) : state.isDirectMatch ? (
+                  <FaFolder />
+                ) : (
+                  <FaFolderOpen />
+                )}
+              </span>
+            </Tooltip>
+          )}
+          {examplesHidden && hasExamples(property.schema) && (
+            <Tooltip
+              title="Examples hidden"
+              content="Examples are available for this property but are currently hidden. Press 'e' to show examples."
+              placement="top"
+            >
+              <span
+                className="examples-hidden-indicator"
+                aria-label={`${property.name} has examples that are currently hidden`}
+              >
+                <FaEyeSlash />
               </span>
             </Tooltip>
           )}
@@ -371,6 +467,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
                   title="Pattern property"
                   content="This represents dynamic field names. Unlike fixed property names, this can match multiple different field names in your data."
                   placement="top"
+                  nonInteractive={true}
                 >
                   <Badge variant="pattern" size="sm">
                     {property.name}
@@ -380,22 +477,37 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
                 property.name
               )}
             </span>
-            {schemaType && (
+            {property.schema.enum || getEnumId(property.schema) ? (
               <Tooltip
                 title="Data type"
-                content={getTypeDescription(schemaType)}
+                content={getEnumDescription(property.schema, rootSchema)}
                 placement="top"
+                nonInteractive={true}
               >
-                <Badge variant="type" size="sm">
-                  {schemaType}
+                <Badge variant="custom-type" size="sm">
+                  {getEnumId(property.schema) || 'enum'}
                 </Badge>
               </Tooltip>
+            ) : (
+              schemaType && (
+                <Tooltip
+                  title="Data type"
+                  content={getTypeDescription(schemaType)}
+                  placement="top"
+                  nonInteractive={true}
+                >
+                  <Badge variant="type" size="sm">
+                    {schemaType}
+                  </Badge>
+                </Tooltip>
+              )
             )}
             {property.required && (
               <Tooltip
                 title="Required property"
                 content="This property must be present in valid data."
                 placement="top"
+                nonInteractive={true}
               >
                 <Badge variant="required" size="sm">
                   required
@@ -421,16 +533,18 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
       {state.expanded && hasValidSchema && (
         <>
           <div
-            className={`schema-details ${includeExamples && hasExamples(property.schema) && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
+            className={`schema-details ${includeExamples && !examplesHidden && hasExamples(property.schema) && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
             data-has-examples={hasExamples(property.schema)}
             data-include-examples={includeExamples}
             data-split-active={
               includeExamples &&
+              !examplesHidden &&
               hasExamples(property.schema) &&
               (examplesOnFocusOnly ? focusedProperty === propertyKey : true)
             }
           >
             {includeExamples &&
+            !examplesHidden &&
             hasExamples(property.schema) &&
             (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? (
               <>
@@ -473,7 +587,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
               onCopy={onCopy}
               onCopyLink={onCopyLink}
               collapsible={collapsible}
-              includeExamples={includeExamples}
+              includeExamples={includeExamples && !examplesHidden}
               examplesOnFocusOnly={examplesOnFocusOnly}
               rootSchema={rootSchema}
               toggleProperty={toggleProperty}
@@ -481,6 +595,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
               onFocusChange={onFocusChange}
               options={options}
               searchQuery={searchQuery}
+              examplesHidden={examplesHidden}
             />
           )}
         </>

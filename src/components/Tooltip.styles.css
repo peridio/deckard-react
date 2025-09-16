@@ -102,3 +102,35 @@
   font-weight: 600 !important;
   color: #1f2937 !important;
 }
+
+/* ===== TOOLTIP TRIGGER FOCUS STYLES ===== */
+
+.tooltip-trigger:focus {
+  outline: 2px solid var(--schema-accent, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tooltip-trigger:focus-visible {
+  outline: 2px solid var(--schema-accent, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Remove focus outline when not using keyboard */
+.tooltip-trigger:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Long press visual feedback */
+.tooltip-trigger:active {
+  opacity: 0.8;
+  transition: opacity 0.1s ease-in-out;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-trigger:active {
+    transition: none;
+  }
+}

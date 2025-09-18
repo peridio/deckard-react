@@ -6,155 +6,57 @@
   cursor: pointer;
   padding: var(--schema-space-sm);
   border-radius: var(--schema-radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 2rem;
   height: 2rem;
   color: var(--schema-text-muted);
   transition: all var(--schema-transition);
   position: relative;
+  vertical-align: middle;
+}
+
+.schema-container .settings-trigger:focus-visible {
+  outline: none;
+  background: var(--schema-surface-hover);
+  color: var(--schema-text);
+  box-shadow: 0 0 0 2px var(--schema-accent-soft);
 }
 
 .schema-container .settings-trigger:hover {
   background: var(--schema-surface-hover);
   color: var(--schema-text);
-  transform: rotate(45deg);
 }
 
 .schema-container .settings-trigger:active {
-  transform: rotate(45deg) scale(0.95);
+  transform: scale(0.95);
 }
 
 .schema-container .settings-trigger svg {
   width: 1rem;
   height: 1rem;
-}
-
-/* ===== SETTINGS OVERLAY ===== */
-
-.schema-container .settings-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 200ms ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(4px);
-  }
-}
-
-/* ===== SETTINGS MODAL ===== */
-
-.schema-container .settings-modal {
-  background: var(--schema-modal-bg);
-  border: 1px solid var(--schema-border);
-  border-radius: var(--schema-radius-lg);
-  width: 90%;
-  max-width: 480px;
-  max-height: 85vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-  animation: slideUp 250ms ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* ===== SETTINGS HEADER ===== */
-
-.schema-container .settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--schema-space-xl);
-  padding-bottom: var(--schema-space-lg);
-  border-bottom: 1px solid var(--schema-border);
-}
-
-.schema-container .settings-title {
-  font-size: var(--schema-text-lg);
-  font-weight: 600;
-  margin: 0;
-  color: var(--schema-text);
-  letter-spacing: -0.01em;
-}
-
-.schema-container .settings-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: var(--schema-space-sm);
-  border-radius: var(--schema-radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  color: var(--schema-text-muted);
   transition: all var(--schema-transition);
 }
 
-.schema-container .settings-close:hover {
-  background: var(--schema-danger);
-  color: var(--schema-text-inverse);
-  transform: scale(1.05);
+.schema-container .settings-trigger:hover svg {
+  transform: rotate(45deg);
 }
 
-.schema-container .settings-close:active {
-  transform: scale(0.95);
-}
-
-.schema-container .settings-close svg {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-/* ===== SETTINGS CONTENT ===== */
-
-.schema-container .settings-content {
-  padding: 0;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
+/* ===== SETTINGS MODAL CUSTOMIZATIONS ===== */
+/* Custom modal sizing is now handled by Modal.styles.css */
 
 /* ===== SETTINGS SECTIONS ===== */
 
 .schema-container .settings-section {
-  padding: var(--schema-space-lg) var(--schema-space-xl);
+  padding: 0 0 var(--schema-space-lg) 0;
   border-bottom: 1px solid var(--schema-border);
+  margin-bottom: var(--schema-space-lg);
 }
 
 .schema-container .settings-section:last-child {
   border-bottom: none;
+  margin-bottom: 0;
 }
 
 .schema-container .settings-section-title {
@@ -293,12 +195,6 @@
 
 /* ===== SETTINGS FOOTER ===== */
 
-.schema-container .settings-footer {
-  padding: var(--schema-space-lg) var(--schema-space-xl);
-  border-top: 1px solid var(--schema-border);
-  background: var(--schema-modal-bg);
-}
-
 .schema-container .settings-note {
   font-size: var(--schema-text-xs);
   color: var(--schema-text-muted);
@@ -310,18 +206,6 @@
 /* ===== RESPONSIVE ADJUSTMENTS ===== */
 
 @media (max-width: 640px) {
-  .schema-container .settings-modal {
-    width: 95%;
-    max-height: 90vh;
-  }
-
-  .schema-container .settings-header,
-  .schema-container .settings-section,
-  .schema-container .settings-footer {
-    padding-left: var(--schema-space-lg);
-    padding-right: var(--schema-space-lg);
-  }
-
   .schema-container .settings-option {
     flex-direction: column;
     align-items: flex-start;
@@ -337,17 +221,7 @@
 
 /* ===== DARK THEME ADJUSTMENTS ===== */
 
-@media (prefers-color-scheme: dark) {
-  .schema-container .settings-overlay {
-    background: rgba(0, 0, 0, 0.6);
-  }
-
-  .schema-container .settings-modal {
-    box-shadow:
-      0 25px 50px -12px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
-}
+/* Dark theme adjustments are handled by the shared Modal component */
 
 /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
 
@@ -367,28 +241,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .schema-container .settings-trigger:hover {
+  .schema-container .settings-trigger:hover svg {
     transform: none;
   }
 
   .schema-container .settings-trigger:active {
     transform: none;
-  }
-
-  .schema-container .settings-close:hover {
-    transform: none;
-  }
-
-  .schema-container .settings-close:active {
-    transform: none;
-  }
-
-  .schema-container .settings-overlay {
-    animation: none;
-  }
-
-  .schema-container .settings-modal {
-    animation: none;
   }
 }
 
@@ -451,10 +309,4 @@
   font-size: var(--schema-text-sm);
   font-weight: 500;
   color: var(--schema-text);
-}
-
-/* ===== CUSTOM PROPERTIES FOR THEMING ===== */
-
-.schema-container {
-  --schema-radius-lg: 0.75rem;
 }

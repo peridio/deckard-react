@@ -44,6 +44,7 @@ export interface JsonSchema {
   definitions?: Record<string, JsonSchema>;
   $defs?: Record<string, JsonSchema>;
   $ref?: string;
+  __originalRef?: string; // Preserved original $ref for enum ID extraction
   if?: JsonSchema;
   then?: JsonSchema;
   else?: JsonSchema;
@@ -98,6 +99,7 @@ export interface DeckardOptions {
   includeExamples?: boolean;
   examplesOnFocusOnly?: boolean;
   searchable?: boolean;
+  searchIncludesExamples?: boolean;
   collapsible?: boolean;
   autoExpand?: boolean;
   theme?: 'light' | 'dark' | 'auto';

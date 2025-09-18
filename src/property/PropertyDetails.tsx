@@ -1,6 +1,4 @@
-import React, { useState, useCallback } from 'react';
-import { HiBarsArrowDown } from 'react-icons/hi2';
-import { FaCopy } from 'react-icons/fa';
+import React from 'react';
 import {
   SchemaProperty,
   PropertyConstraint,
@@ -44,60 +42,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 }) => {
   const constraints = getConstraints(property.schema);
 
-  const _handleCodeClick = useCallback(
-    (e: React.MouseEvent<HTMLElement>) => {
-      e.stopPropagation();
-      const text = e.currentTarget.textContent || '';
-      if (text.length > 2) {
-        onCopy(text, e.currentTarget);
-      }
-    },
-    [onCopy]
-  );
-
-  // CodeBlock component with copy and wrap controls
-  const CodeBlock: React.FC<{
-    content: string;
-  }> = ({ content }) => {
-    const [isWrapped, setIsWrapped] = useState(false);
-
-    const handleCopy = useCallback(() => {
-      const element =
-        typeof document !== 'undefined' ? document.createElement('div') : null;
-      onCopy(content, element as HTMLElement);
-    }, [content]);
-
-    const toggleWrap = useCallback(() => {
-      setIsWrapped(prev => !prev);
-    }, []);
-
-    return (
-      <div
-        className={`code-block-container ${isWrapped ? 'wrap-enabled' : ''}`}
-      >
-        <div className="code-controls">
-          <button
-            className="code-control-button"
-            onClick={handleCopy}
-            title="Copy to clipboard."
-          >
-            <FaCopy />
-          </button>
-          <button
-            className={`code-control-button ${isWrapped ? 'wrap-enabled' : ''}`}
-            onClick={toggleWrap}
-            title="Toggle line wrap."
-          >
-            <HiBarsArrowDown />
-          </button>
-        </div>
-        <pre>
-          <code>{content}</code>
-        </pre>
-      </div>
-    );
-  };
-
   return (
     <>
       {property.schema.__isPatternProperty && property.schema.__pattern && (
@@ -125,6 +69,7 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         <OneOfSelector
           oneOfOptions={property.schema.oneOf}
           rootSchema={rootSchema}
+          propertyPath={property.path}
           _onCopy={onCopy}
           onCopyLink={onCopyLink}
           propertyStates={propertyStates}
@@ -242,15 +187,30 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
       {constraints.length > 0 && (
         <div className="constraints">
-          {constraints.map((constraint: PropertyConstraint, index: number) => (
-            <CodeSnippet
-              key={index}
-              code={`${constraint.label}: ${String(constraint.value)}`}
-              variant="constraint"
-              size="xs"
-              copyable={false}
-            />
-          ))}
+          {constraints.map((constraint: PropertyConstraint, index: number) => {
+            if (
+              ['range', 'length', 'items', 'multipleOf'].includes(
+                constraint.type
+              )
+            ) {
+              // Style numeric constraints like enum badges
+              return (
+                <Badge key={index} variant="enum" size="xs">
+                  {constraint.label}: {String(constraint.value)}
+                </Badge>
+              );
+            }
+            // Keep other constraints as CodeSnippet
+            return (
+              <CodeSnippet
+                key={index}
+                code={`${constraint.label}: ${String(constraint.value)}`}
+                variant="constraint"
+                size="xs"
+                copyable={false}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -280,9 +240,28 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       )}
 
       {property.schema.default !== undefined && (
-        <div className="default-value">
-          <CodeBlock content={JSON.stringify(property.schema.default)} />
-        </div>
+        <BadgeGroup
+          values={[property.schema.default]}
+          label="default"
+          showLabel={true}
+          onValueClick={value => {
+            const copyValue =
+              value === null
+                ? 'null'
+                : value === undefined
+                  ? 'undefined'
+                  : typeof value === 'boolean' || typeof value === 'number'
+                    ? String(value)
+                    : JSON.stringify(value);
+            const element =
+              typeof document !== 'undefined'
+                ? document.createElement('div')
+                : null;
+            onCopy(copyValue, element as HTMLElement);
+          }}
+          badgeVariant="default-value"
+          badgeSize="xs"
+        />
       )}
     </>
   );

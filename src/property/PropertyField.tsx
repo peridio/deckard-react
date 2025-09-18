@@ -4,8 +4,9 @@ import {
   FaChevronRight,
   FaLink,
   FaMapPin,
-  FaSearch,
 } from 'react-icons/fa';
+import { FaFolder, FaFolderOpen } from 'react-icons/fa';
+import { FaSitemap } from 'react-icons/fa';
 import { SchemaProperty, PropertyState, JsonSchema } from '../types';
 import { getSchemaType, hasExamples } from '../utils';
 import ExamplesPanel from './ExamplesPanel';
@@ -40,6 +41,50 @@ const getTypeDescription = (type: string): string => {
       }
       return 'The expected data type for this property.';
   }
+};
+
+const getEnumId = (schema: JsonSchema): string | null => {
+  // Check for preserved original $ref (from resolved schemas)
+  if (schema.__originalRef && typeof schema.__originalRef === 'string') {
+    const match = schema.__originalRef.match(/#\/definitions\/(.+)$/);
+    if (match && match[1].trim()) {
+      return match[1];
+    }
+  }
+
+  // Check for direct $ref (unresolved schemas)
+  if (schema.$ref && typeof schema.$ref === 'string') {
+    const match = schema.$ref.match(/#\/definitions\/(.+)$/);
+    if (match && match[1].trim()) {
+      return match[1];
+    }
+  }
+
+  return null;
+};
+
+const getEnumDescription = (
+  schema: JsonSchema,
+  rootSchema?: JsonSchema
+): string => {
+  // If schema has preserved __originalRef or $ref, resolve it to get the description
+  const refToUse = schema.__originalRef || schema.$ref;
+  if (refToUse && rootSchema) {
+    const enumId = getEnumId(schema);
+    if (enumId && rootSchema.definitions && rootSchema.definitions[enumId]) {
+      const resolvedSchema = rootSchema.definitions[enumId];
+      if (resolvedSchema.description) {
+        return resolvedSchema.description;
+      }
+    }
+  }
+
+  // Fallback to direct schema description
+  if (schema.description) {
+    return schema.description;
+  }
+
+  return 'No description provided for this enumerated type.';
 };
 
 interface PropertyFieldProps {
@@ -92,7 +137,9 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
 
     const checkActiveRoute = () => {
       const hash = window.location.hash.replace('#', '');
-      setIsActiveRoute(hash === propertyKey);
+      // Convert hash format (with dashes) to property key format (with dots)
+      const fieldKey = hash.replace(/-/g, '.');
+      setIsActiveRoute(fieldKey === propertyKey);
     };
 
     checkActiveRoute();
@@ -278,22 +325,40 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                   ? 'Direct and nested search match'
                   : state.isDirectMatch
                     ? 'Direct search match'
-                    : 'Contains search match'
+                    : 'Indirect search match'
               }
               content={
                 state.isDirectMatch && state.hasNestedMatches
                   ? 'This property matches your search query and also contains nested matches.'
                   : state.isDirectMatch
                     ? 'This property matches your search query.'
-                    : 'This property contains nested matches for your search.'
+                    : 'This property has nested properties that match your search.'
               }
               placement="top"
             >
               <span
-                className={`row-button search-hit-indicator ${!state.isDirectMatch ? 'parent-match' : ''}`}
-                aria-label={`${property.name} ${state.isDirectMatch ? 'matches' : 'contains'} current search`}
+                className={`row-button search-hit-indicator ${
+                  state.isDirectMatch && state.hasNestedMatches
+                    ? 'both-hit'
+                    : state.isDirectMatch
+                      ? 'direct-hit'
+                      : 'indirect-hit'
+                }`}
+                aria-label={`${property.name} ${
+                  state.isDirectMatch && state.hasNestedMatches
+                    ? 'matches search and contains nested matches'
+                    : state.isDirectMatch
+                      ? 'matches current search'
+                      : 'contains nested search matches'
+                }`}
               >
-                <FaSearch />
+                {state.isDirectMatch && state.hasNestedMatches ? (
+                  <FaSitemap />
+                ) : state.isDirectMatch ? (
+                  <FaFolder />
+                ) : (
+                  <FaFolderOpen />
+                )}
               </span>
             </Tooltip>
           )}
@@ -336,6 +401,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                   title="Pattern property"
                   content="This represents dynamic field names. Unlike fixed property names, this can match multiple different field names in your data."
                   placement="top"
+                  nonInteractive={true}
                 >
                   <Badge variant="pattern" size="sm">
                     {property.name}
@@ -345,21 +411,42 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                 property.name
               )}
             </span>
-            {schemaType && (
+            {property.schema.enum || getEnumId(property.schema) ? (
               <Tooltip
                 title="Data type"
-                content={getTypeDescription(schemaType)}
+                content={getEnumDescription(property.schema, rootSchema)}
                 placement="top"
+                nonInteractive={true}
               >
-                <Badge variant="type" size="sm">
-                  {schemaType}
+                <Badge variant="custom-type" size="sm">
+                  {getEnumId(property.schema) || 'enum'}
                 </Badge>
               </Tooltip>
+            ) : (
+              schemaType && (
+                <Tooltip
+                  title="Data type"
+                  content={getTypeDescription(schemaType)}
+                  placement="top"
+                  nonInteractive={true}
+                >
+                  <Badge variant="type" size="sm">
+                    {schemaType}
+                  </Badge>
+                </Tooltip>
+              )
             )}
             {property.required && (
-              <Badge className="required-badge" variant="required">
-                required
-              </Badge>
+              <Tooltip
+                title="Required property"
+                content="This property must be present in valid data."
+                placement="top"
+                nonInteractive={true}
+              >
+                <Badge className="required-badge" variant="required">
+                  required
+                </Badge>
+              </Tooltip>
             )}
             {!state.expanded &&
               hasValidSchema &&

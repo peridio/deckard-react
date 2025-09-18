@@ -8,10 +8,12 @@ export type BadgeVariant =
   | 'pattern'
   | 'label'
   | 'enum'
+  | 'custom-type'
   | 'reference'
   | 'disabled'
   | 'warning'
-  | 'schema-type';
+  | 'schema-type'
+  | 'default-value';
 
 export type BadgeSize = 'xs' | 'sm' | 'md';
 

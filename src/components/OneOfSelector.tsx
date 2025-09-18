@@ -1,13 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { JsonSchema, PropertyState } from '../types';
-import { resolveSchema, extractProperties } from '../utils';
+import { resolveSchema, extractProperties, searchInSchema } from '../utils';
 import { Badge } from './Badge';
 import Rows from '../Rows';
+
 import './OneOfSelector.styles.css';
 
 interface OneOfSelectorProps {
   oneOfOptions: JsonSchema[];
   rootSchema: JsonSchema;
+  propertyPath?: string[];
   _onCopy?: (text: string, element: HTMLElement) => void;
   onCopyLink?: (propertyKey: string, element: HTMLElement) => void;
   propertyStates?: Record<string, PropertyState>;
@@ -21,6 +23,7 @@ interface OneOfSelectorProps {
 const OneOfSelector: React.FC<OneOfSelectorProps> = ({
   oneOfOptions,
   rootSchema,
+  propertyPath = [],
   _onCopy,
   onCopyLink,
   propertyStates: _propertyStates = {},
@@ -39,12 +42,22 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
 
   const getOptionDisplay = useCallback(
     (option: JsonSchema, index: number) => {
+      // Check for search hit status
+      let searchHitStatus = 'none';
+      if (searchQuery?.trim()) {
+        const hasMatch = searchInSchema(option, rootSchema, searchQuery, true);
+        if (hasMatch) {
+          searchHitStatus = 'direct'; // OneOf options are considered direct matches when they contain search hits
+        }
+      }
+
       // Check for title first, use it if available
       if (option.title) {
         return {
           label: option.title,
           type: option.type || 'object',
           isReference: Boolean(oneOfOptions[index].$ref),
+          searchHitStatus,
         };
       }
 
@@ -57,6 +70,7 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
           label: displayName,
           type: 'object',
           isReference: true,
+          searchHitStatus,
         };
       }
 
@@ -67,6 +81,7 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
           label: types.join(' | '),
           type: types.join(' | '),
           isReference: false,
+          searchHitStatus,
         };
       }
 
@@ -74,9 +89,10 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
         label: 'Unknown',
         type: 'unknown',
         isReference: false,
+        searchHitStatus,
       };
     },
-    [oneOfOptions]
+    [oneOfOptions, searchQuery, rootSchema]
   );
 
   const selectedOption = resolvedOptions[selectedIndex];
@@ -89,11 +105,15 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
       return [];
     }
 
-    // Create unique property states for oneOf content to avoid conflicts
-    const oneOfPath = ['oneof', selectedIndex.toString()];
+    // Use the provided property path to maintain context for pattern properties
+    // If no property path is provided, fall back to the old oneOf path behavior
+    const basePath =
+      propertyPath.length > 0
+        ? propertyPath
+        : ['oneof', selectedIndex.toString()];
     const properties = extractProperties(
       currentOption,
-      oneOfPath,
+      basePath,
       0,
       rootSchema,
       []
@@ -101,7 +121,7 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
 
     // Sort properties alphabetically by name
     return properties.sort((a, b) => a.name.localeCompare(b.name));
-  }, [resolvedOptions, selectedIndex, rootSchema]);
+  }, [resolvedOptions, selectedIndex, rootSchema, propertyPath]);
 
   // Create isolated property states for oneOf properties - completely independent
   const [internalPropertyStates, setInternalPropertyStates] = useState<
@@ -151,18 +171,26 @@ const OneOfSelector: React.FC<OneOfSelectorProps> = ({
         {optionDisplays.map((display, index) => (
           <button
             key={index}
-            className={`oneof-tab ${selectedIndex === index ? 'active' : ''}`}
+            className={`oneof-tab ${selectedIndex === index ? 'active' : ''} ${
+              display.searchHitStatus !== 'none'
+                ? `search-hit ${display.searchHitStatus}-hit`
+                : ''
+            }`}
             onClick={() => setSelectedIndex(index)}
             title={
               display.isReference
-                ? `Complex object: ${display.label}`
-                : `Primitive types: ${display.type}`
+                ? `Complex object: ${display.label}${display.searchHitStatus !== 'none' ? ' (matches search)' : ''}`
+                : `Primitive types: ${display.type}${display.searchHitStatus !== 'none' ? ' (matches search)' : ''}`
             }
           >
             <Badge
               variant={display.isReference ? 'reference' : 'type'}
               size="md"
-              className={selectedIndex === index ? 'selected' : 'unselected'}
+              className={`${selectedIndex === index ? 'selected' : 'unselected'} ${
+                display.searchHitStatus !== 'none'
+                  ? `search-hit ${display.searchHitStatus}-hit`
+                  : ''
+              }`}
             >
               {display.label}
             </Badge>

@@ -18,6 +18,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Keep committed as true, may be false for local development.
     emptyOutDir: false,
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),

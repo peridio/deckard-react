@@ -1,0 +1,225 @@
+/* ===== MODAL OVERLAY ===== */
+
+.schema-container .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+/* ===== MODAL CONTAINER ===== */
+
+.schema-container .modal {
+  background: var(--schema-modal-bg);
+  border: 1px solid var(--schema-border);
+  border-radius: var(--schema-radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: slideUp 250ms ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== MODAL SIZES ===== */
+
+.schema-container .modal-sm {
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+}
+
+.schema-container .modal-md {
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+}
+
+.schema-container .modal-lg {
+  width: 90vw;
+  max-width: 800px;
+  max-height: 80vh;
+}
+
+.schema-container .modal-xl {
+  width: 95vw;
+  max-width: 1200px;
+  max-height: 90vh;
+}
+
+/* ===== MODAL CUSTOM SIZES ===== */
+
+.schema-container .settings-modal-custom {
+  width: 90%;
+  max-width: 480px;
+}
+
+/* ===== MODAL HEADER ===== */
+
+.schema-container .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--schema-space-xl);
+  padding-bottom: var(--schema-space-lg);
+  border-bottom: 1px solid var(--schema-border);
+}
+
+.schema-container .modal-title {
+  font-size: var(--schema-text-lg);
+  font-weight: 600;
+  margin: 0;
+  color: var(--schema-text);
+  letter-spacing: -0.01em;
+}
+
+.schema-container .modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--schema-space-sm);
+  border-radius: var(--schema-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--schema-text-muted);
+  transition: all var(--schema-transition);
+}
+
+.schema-container .modal-close:hover {
+  background: var(--schema-danger);
+  color: var(--schema-text-inverse);
+  transform: scale(1.05);
+}
+
+.schema-container .modal-close:active {
+  transform: scale(0.95);
+}
+
+.schema-container .modal-close svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* ===== MODAL CONTENT ===== */
+
+.schema-container .modal-content {
+  padding: var(--schema-space-lg);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== MODAL FOOTER ===== */
+
+.schema-container .modal-footer {
+  padding: var(--schema-space-lg) var(--schema-space-xl);
+  border-top: 1px solid var(--schema-border);
+  background: var(--schema-modal-bg);
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 640px) {
+  .schema-container .modal-sm,
+  .schema-container .modal-md,
+  .schema-container .modal-lg,
+  .schema-container .modal-xl {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .schema-container .settings-modal-custom {
+    width: 95%;
+  }
+
+  .schema-container .modal-header,
+  .schema-container .modal-content,
+  .schema-container .modal-footer {
+    padding-left: var(--schema-space-lg);
+    padding-right: var(--schema-space-lg);
+  }
+}
+
+/* ===== DARK THEME ADJUSTMENTS ===== */
+
+@media (prefers-color-scheme: dark) {
+  .schema-container .modal-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .schema-container .modal {
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* ===== ACCESSIBILITY ENHANCEMENTS ===== */
+
+@media (prefers-contrast: high) {
+  .schema-container .modal-close {
+    border: 1px solid var(--schema-border-strong);
+  }
+
+  .schema-container .modal {
+    border-width: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schema-container .modal-overlay {
+    animation: none;
+  }
+
+  .schema-container .modal {
+    animation: none;
+  }
+
+  .schema-container .modal-close:hover {
+    transform: none;
+  }
+
+  .schema-container .modal-close:active {
+    transform: none;
+  }
+}
+
+/* ===== CUSTOM PROPERTIES FOR THEMING ===== */
+
+.schema-container {
+  --schema-radius-lg: 0.75rem;
+}

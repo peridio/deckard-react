@@ -1,18 +1,16 @@
 #!/usr/bin/env node
 
-import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 // Try to import the built component, fall back to source if needed
 let DeckardSchema;
 try {
-  const deckardModule = await import("./dist/index.esm.js");
+  const deckardModule = await import('./dist/index.esm.js');
   DeckardSchema = deckardModule.DeckardSchema;
 } catch (error) {
   console.error(
-    'Warning: Could not load built component, ensure "npm run build" has been run',
+    'Warning: Could not load built component, ensure "npm run build" has been run'
   );
   process.exit(1);
 }
@@ -20,7 +18,7 @@ try {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const schemaJson = args[0];
-const optionsJson = args[1] || "{}";
+const optionsJson = args[1] || '{}';
 
 try {
   // Parse input
@@ -32,11 +30,11 @@ try {
     React.createElement(DeckardSchema, {
       schema: schema,
       options: options,
-    }),
+    })
   );
 
   // Output the HTML
-  console.log(componentHtml);
+  process.stdout.write(componentHtml);
 } catch (error) {
   console.error(`Error rendering schema: ${error.message}`);
   process.exit(1);

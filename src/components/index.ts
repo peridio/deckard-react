@@ -21,6 +21,11 @@ export type { TooltipProps } from './Tooltip';
 export { default as TooltipGlobalManagerProvider } from './TooltipGlobalManager';
 export { useTooltipGlobalManager } from './TooltipGlobalManager';
 
+export { default as Modal } from './Modal';
+export type { ModalProps } from './Modal';
+
+export { default as KeyboardModal } from './KeyboardModal';
+
 export { default as OneOfSelector } from './OneOfSelector';
 export { default as AllOfSelector } from './AllOfSelector';
 export { default as SchemaWarning } from './SchemaWarning';

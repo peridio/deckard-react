@@ -1,0 +1,97 @@
+/* ===== KEYBOARD SHORTCUTS GRID ===== */
+
+.keyboard-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--schema-space-lg);
+}
+
+/* ===== KEYBOARD SECTIONS ===== */
+
+.keyboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--schema-space-sm);
+}
+
+.keyboard-section-title {
+  margin: 0 0 var(--schema-space-sm) 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--schema-text-primary);
+  padding-bottom: var(--schema-space-xs);
+  border-bottom: 1px solid var(--schema-border);
+}
+
+/* ===== KEYBOARD SHORTCUTS ===== */
+
+.keyboard-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--schema-space-xs);
+}
+
+.keyboard-shortcut {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-md);
+  padding: var(--schema-space-xs) 0;
+}
+
+.keyboard-keys {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-xs);
+  min-width: 100px;
+}
+
+.keyboard-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 var(--schema-space-xs);
+  background: var(--schema-bg-secondary);
+  border: 1px solid var(--schema-border);
+  border-radius: var(--schema-radius-sm);
+  font-family:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--schema-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.keyboard-description {
+  color: var(--schema-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  flex: 1;
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 768px) {
+  .keyboard-shortcuts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .keyboard-shortcut {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--schema-space-xs);
+  }
+
+  .keyboard-keys {
+    min-width: auto;
+  }
+}
+
+/* ===== DARK THEME ADJUSTMENTS ===== */
+
+@media (prefers-color-scheme: dark) {
+  .keyboard-keys kbd {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}

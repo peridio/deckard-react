@@ -83,6 +83,13 @@
     --schema-accent-hover: rgba(148, 204, 235, 0.08);
     --schema-modal-bg: #ffffff;
   }
+
+  .schema-container a.link-button:hover,
+  .schema-container a.row-button.link-button:hover,
+  .schema-container a.link-button:visited:hover,
+  .schema-container a.row-button.link-button:visited:hover {
+    color: #ffffff;
+  }
 }
 
 .schema-container * {
@@ -112,6 +119,49 @@
   display: flex;
   justify-content: flex-end;
   margin-bottom: var(--schema-space-md);
+}
+
+.schema-container .header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--schema-space-sm);
+}
+
+.schema-container .keyboard-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--schema-space-sm);
+  border-radius: var(--schema-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--schema-text-muted);
+  transition: all var(--schema-transition);
+  position: relative;
+}
+
+.schema-container .keyboard-button:focus-visible {
+  outline: none;
+  background: var(--schema-surface-hover);
+  color: var(--schema-text);
+  box-shadow: 0 0 0 2px var(--schema-accent-soft);
+}
+
+.schema-container .keyboard-button:hover {
+  background: var(--schema-surface-hover);
+  color: var(--schema-text);
+}
+
+.schema-container .keyboard-button:active {
+  transform: scale(0.95);
+}
+
+.schema-container .keyboard-button svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .schema-container .schema-description {
@@ -237,17 +287,10 @@
 
 .schema-container .search-input:focus {
   outline: none;
-  box-shadow: inset 3px 0 0 var(--schema-border-focus);
   background: var(--schema-accent-hover);
 }
 
 /* ===== FOCUS STYLES ===== */
-
-.schema-container button:focus-visible {
-  outline: none;
-  box-shadow: inset 3px 0 0 var(--schema-border-focus);
-  background: var(--schema-accent-hover);
-}
 
 /* ===== ARRAY AND COMPOUND SCHEMAS ===== */
 
@@ -351,9 +394,11 @@
 }
 
 .schema-container a.link-button:hover,
-.schema-container a.row-button.link-button:hover {
+.schema-container a.row-button.link-button:hover,
+.schema-container a.link-button:visited:hover,
+.schema-container a.row-button.link-button:visited:hover {
   text-decoration: none;
-  color: var(--schema-text);
+  color: #000000;
 }
 
 /* Active route link button - red map pin */
@@ -491,6 +536,10 @@
   .schema-container .required-badge {
     font-weight: 700;
   }
+
+  .schema-container .keyboard-button {
+    border: 1px solid var(--schema-border-strong);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -504,5 +553,9 @@
   /* Disable tooltip wiggle effect for users who prefer reduced motion */
   .tooltips-shimmer .tooltip-trigger {
     animation: none;
+  }
+
+  .schema-container .keyboard-button:active {
+    transform: none;
   }
 }

@@ -2114,25 +2114,18 @@ describe('DeckardSchema', () => {
                   type: 'object',
                   patternProperties: {
                     '^[a-zA-Z0-9_-]+$': {
-                      oneOf: [
-                        {
-                          type: 'object',
-                          properties: {
-                            image: {
-                              type: 'string',
-                              description: 'Docker image',
-                            },
-                            dependencies: {
-                              type: 'object',
-                              description: 'Dependencies',
-                            },
-                          },
-                        },
-                        {
-                          type: 'string',
-                        },
-                      ],
+                      type: 'object',
                       description: 'Target-specific SDK configuration',
+                      properties: {
+                        image: {
+                          type: 'string',
+                          description: 'Docker image',
+                        },
+                        dependencies: {
+                          type: 'object',
+                          description: 'Dependencies',
+                        },
+                      },
                     },
                   },
                 },
@@ -2179,107 +2172,936 @@ describe('DeckardSchema', () => {
           expect(imageField || dependenciesField).toBeTruthy();
         });
       });
+
+      test('oneOf with examples should render examples panel', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
+
+        const oneOfWithExamplesSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            config: {
+              description: 'Configuration options',
+              oneOf: [
+                {
+                  type: 'string',
+                  description: 'Simple string configuration',
+                  examples: ['debug', 'info', 'warn', 'error'],
+                },
+                {
+                  type: 'object',
+                  description: 'Complex object configuration',
+                  properties: {
+                    level: { type: 'string' },
+                    format: { type: 'string' },
+                  },
+                  examples: [
+                    { level: 'debug', format: 'json' },
+                    { level: 'info', format: 'plain' },
+                  ],
+                },
+              ],
+            },
+          },
+        };
+
+        render(<DeckardSchema schema={oneOfWithExamplesSchema} />);
+
+        // Find and expand the config property
+        const configProperty = screen.getByText('config');
+        expect(configProperty).toBeInTheDocument();
+
+        // Click to expand the property
+        fireEvent.click(configProperty);
+
+        await waitFor(() => {
+          // Should see oneOf tabs
+          const stringTab = screen.getByText('string');
+          expect(stringTab).toBeInTheDocument();
+
+          // Should see examples panel for the string option
+          const examplesTitles = screen.getAllByText('Examples');
+          expect(examplesTitles.length).toBeGreaterThan(0);
+
+          // Should see examples content - check for the examples panel structure
+          const examplesPanel = document.querySelector('.examples-panel');
+          expect(examplesPanel).toBeInTheDocument();
+
+          // Should see example items
+          const exampleItems = document.querySelectorAll('.example-item');
+          expect(exampleItems.length).toBeGreaterThan(0);
+        });
+      });
+
+      test('pattern property with oneOf should render examples panel', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
+
+        const patternOneOfSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            dependencies: {
+              title: 'Dependencies',
+              type: 'object',
+              description:
+                'Object defining package dependencies with version constraints.',
+              patternProperties: {
+                '^[a-zA-Z0-9_.-]+$': {
+                  description:
+                    'The value serves as a human-readable identifier for the dependency.',
+                  oneOf: [
+                    {
+                      type: 'string',
+                      enum: ['*'],
+                      description: 'Version string',
+                      examples: ['*'],
+                    },
+                    {
+                      type: 'object',
+                      description: 'Version object with advanced configuration',
+                      properties: {
+                        ext: { type: 'string' },
+                        vsn: { type: 'string' },
+                      },
+                      examples: [{ ext: 'avocado-ext-dev', vsn: '*' }],
+                    },
+                  ],
+                },
+              },
+              additionalProperties: false,
+            },
+          },
+        };
+
+        render(
+          <DeckardSchema
+            schema={patternOneOfSchema}
+            options={{
+              includeExamples: true,
+              examplesOnFocusOnly: false,
+              collapsible: false,
+              autoExpand: true,
+            }}
+          />
+        );
+
+        await waitFor(() => {
+          // Should see dependencies property
+          const dependenciesProperty = screen.getByText('dependencies');
+          expect(dependenciesProperty).toBeInTheDocument();
+
+          // Should see pattern property
+          const patternProperty = screen.getByText('{pattern}');
+          expect(patternProperty).toBeInTheDocument();
+
+          // Should see oneOf tabs
+          const oneOfTab = screen.getByText('oneOf');
+          expect(oneOfTab).toBeInTheDocument();
+
+          // Should see Examples panel
+          const examplesTitles = screen.getAllByText('Examples');
+          expect(examplesTitles.length).toBeGreaterThan(0);
+
+          // Should see examples panel structure
+          const examplesPanel = document.querySelector('.examples-panel');
+          expect(examplesPanel).toBeInTheDocument();
+
+          // Should see example items
+          const exampleItems = document.querySelectorAll('.example-item');
+          expect(exampleItems.length).toBeGreaterThan(0);
+        });
+      });
     });
-  });
 
-  describe('keyboard shortcuts modal', () => {
-    test('opens keyboard modal when keyboard button is clicked', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+    describe('keyboard shortcuts modal', () => {
+      test('opens keyboard modal when keyboard button is clicked', () => {
+        render(<DeckardSchema schema={mockSchema} />);
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
 
-      expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
-      expect(screen.getByText('Navigation')).toBeInTheDocument();
-      expect(screen.getByText('Search')).toBeInTheDocument();
+        expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
+        expect(screen.getByText('Navigation')).toBeInTheDocument();
+        expect(screen.getByText('Search')).toBeInTheDocument();
+      });
+
+      test('closes keyboard modal when close button is clicked', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
+
+        const closeButton = screen.getByLabelText('Close keyboard shortcuts');
+        fireEvent.click(closeButton);
+
+        expect(
+          screen.queryByText('Keyboard shortcuts')
+        ).not.toBeInTheDocument();
+      });
+
+      test('closes keyboard modal when clicking overlay', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
+
+        const overlay = screen
+          .getByText('Keyboard shortcuts')
+          .closest('.modal-overlay');
+        fireEvent.click(overlay!);
+
+        expect(
+          screen.queryByText('Keyboard shortcuts')
+        ).not.toBeInTheDocument();
+      });
+
+      test('displays all keyboard shortcut sections', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Navigation')).toBeInTheDocument();
+        expect(screen.getByText('Search')).toBeInTheDocument();
+        expect(screen.getByText('Expand & collapse')).toBeInTheDocument();
+        expect(screen.getByText('Display')).toBeInTheDocument();
+        expect(screen.getByText('Tooltips')).toBeInTheDocument();
+      });
+
+      test('displays correct navigation shortcuts', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Next property')).toBeInTheDocument();
+        expect(screen.getByText('Previous property')).toBeInTheDocument();
+        expect(screen.getByText('Collapse property')).toBeInTheDocument();
+        expect(screen.getByText('Expand property')).toBeInTheDocument();
+      });
+
+      test('displays correct search shortcuts', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Focus search box')).toBeInTheDocument();
+        expect(screen.getByText('Clear search')).toBeInTheDocument();
+        expect(screen.getByText('Close tooltips')).toBeInTheDocument();
+      });
+
+      test('displays examples shortcut as "Show examples" when examples are hidden', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        // Press 'e' key to hide examples
+        fireEvent.keyDown(document, { key: 'e' });
+
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Show examples')).toBeInTheDocument();
+      });
+
+      test('displays examples shortcut as "Hide examples" when examples are shown', () => {
+        render(<DeckardSchema schema={mockSchema} />);
+
+        // Examples are shown by default, so we should see "Hide examples"
+        const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
+        fireEvent.click(keyboardButton);
+
+        expect(screen.getByText('Hide examples')).toBeInTheDocument();
+      });
     });
 
-    test('closes keyboard modal when close button is clicked', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+    describe('pattern properties with oneOf Examples panel issue', () => {
+      beforeEach(() => {
+        // Clear localStorage to prevent autoExpand state pollution between tests
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.clear();
+        }
+      });
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+      test('pattern property with oneOf should show Examples panel like parent property', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
 
-      expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
+        // This test reproduces the exact issue from the screenshot
+        // Parent property (dependencies) correctly shows Examples panel
+        // Pattern property ({pattern}) with oneOf structure SHOULD show Examples panel when pattern property has examples
+        const patternOneOfSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            dependencies: {
+              title: 'Dependencies',
+              type: 'object',
+              description:
+                'Object defining package dependencies with version constraints.',
+              patternProperties: {
+                '^[a-zA-Z0-9_.-]+$': {
+                  description:
+                    'The value serves as a human-readable identifier for the dependency.',
+                  // Pattern property has its own examples - should show Examples panel
+                  examples: [{ 'pattern-example': '*' }],
+                  oneOf: [
+                    {
+                      type: 'string',
+                      enum: ['*'],
+                      description: 'Version string',
+                      examples: ['*'],
+                    },
+                    {
+                      type: 'object',
+                      description: 'Version object with advanced configuration',
+                      properties: {
+                        ext: {
+                          type: 'string',
+                          description: 'Extension name to reference.',
+                          examples: ['avocado-ext-dev'],
+                        },
+                        vsn: {
+                          type: 'string',
+                          enum: ['*'],
+                          examples: ['*'],
+                        },
+                        config: {
+                          type: 'string',
+                          description: 'Path to config file.',
+                          examples: ['extensions/sshd-dev/avocado.toml'],
+                        },
+                      },
+                      examples: [
+                        { ext: 'avocado-ext-dev', vsn: '*' },
+                        {
+                          ext: 'avocado-rust-ext',
+                          config: 'extensions/sshd-dev/avocado.toml',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+              additionalProperties: false,
+              examples: [
+                {
+                  'avocado-img-bootfiles': '*',
+                  'avocado-img-rootfs': '*',
+                  'avocado-img-initramfs': '*',
+                  'avocado-ext-dev': {
+                    ext: 'avocado-ext-dev',
+                    vsn: '*',
+                  },
+                },
+              ],
+            },
+          },
+        };
 
-      const closeButton = screen.getByLabelText('Close keyboard shortcuts');
-      fireEvent.click(closeButton);
+        const { container } = render(
+          <DeckardSchema
+            schema={patternOneOfSchema}
+            options={{
+              includeExamples: true,
+              examplesOnFocusOnly: false,
+              collapsible: true,
+            }}
+          />
+        );
 
-      expect(screen.queryByText('Keyboard shortcuts')).not.toBeInTheDocument();
-    });
+        // Step 1: Verify parent property (dependencies) shows Examples panel ✅ (should work)
+        const dependenciesExpandButton = container.querySelector(
+          '[data-property-key="dependencies"] .expand-button'
+        );
+        expect(dependenciesExpandButton).toBeInTheDocument();
 
-    test('closes keyboard modal when clicking overlay', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+        // Expand dependencies property
+        fireEvent.click(dependenciesExpandButton!);
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+        await waitFor(() => {
+          // Parent property should have Examples panel in split layout
+          const dependenciesRow = container.querySelector(
+            '[data-property-key="dependencies"]'
+          );
+          expect(dependenciesRow?.classList.contains('expanded')).toBe(true);
+          expect(dependenciesRow?.classList.contains('has-examples')).toBe(
+            true
+          );
 
-      expect(screen.getByText('Keyboard shortcuts')).toBeInTheDocument();
+          // Should show Examples panel for parent
+          const dependenciesExamplesPanel =
+            dependenciesRow?.querySelector('.examples-panel');
+          expect(dependenciesExamplesPanel).toBeInTheDocument();
+        });
 
-      const overlay = screen
-        .getByText('Keyboard shortcuts')
-        .closest('.modal-overlay');
-      fireEvent.click(overlay!);
+        // Step 2: Verify pattern property ({pattern}) shows Examples panel ❌ (currently fails)
+        await waitFor(() => {
+          // Pattern property should be visible after expanding dependencies
+          const patternPropertyElement = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"]'
+          );
+          expect(patternPropertyElement).toBeInTheDocument();
+        });
 
-      expect(screen.queryByText('Keyboard shortcuts')).not.toBeInTheDocument();
-    });
+        // Expand the pattern property
+        const patternExpandButton = container.querySelector(
+          '[data-property-key="dependencies.(pattern-0)"] .expand-button'
+        );
+        expect(patternExpandButton).toBeInTheDocument();
+        fireEvent.click(patternExpandButton!);
 
-    test('displays all keyboard shortcut sections', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+        await waitFor(() => {
+          // Pattern property should be expanded
+          const patternRow = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"]'
+          );
+          expect(patternRow?.classList.contains('expanded')).toBe(true);
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+          // Pattern property SHOULD have Examples panel since it has its own examples
+          // This pattern property has examples: [{ 'pattern-example': '*' }]
+          expect(patternRow).toHaveClass('has-examples');
 
-      expect(screen.getByText('Navigation')).toBeInTheDocument();
-      expect(screen.getByText('Search')).toBeInTheDocument();
-      expect(screen.getByText('Expand & collapse')).toBeInTheDocument();
-      expect(screen.getByText('Display')).toBeInTheDocument();
-      expect(screen.getByText('Tooltips')).toBeInTheDocument();
-    });
+          // Should show Examples panel for pattern property since it has examples
+          const patternExamplesPanel =
+            patternRow!.querySelector('.examples-panel');
+          expect(patternExamplesPanel).toBeInTheDocument();
 
-    test('displays correct navigation shortcuts', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+          // Should show oneOf selector tabs
+          const oneOfTabs = patternRow!.querySelectorAll('.oneof-tab');
+          expect(oneOfTabs).toHaveLength(2);
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+          // Examples panel should show examples from the currently selected oneOf option
+          const exampleItems = patternRow!.querySelectorAll('.example-item');
+          expect(exampleItems.length).toBeGreaterThan(0);
+        });
+      });
 
-      expect(screen.getByText('Next property')).toBeInTheDocument();
-      expect(screen.getByText('Previous property')).toBeInTheDocument();
-      expect(screen.getByText('Collapse property')).toBeInTheDocument();
-      expect(screen.getByText('Expand property')).toBeInTheDocument();
-    });
+      test('oneOf selector buttons should only affect their own Examples panel, not other panels', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
 
-    test('displays correct search shortcuts', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+        // This test reproduces the issue where clicking oneOf selector buttons
+        // affects both the parent property Examples panel AND the pattern property Examples panel
+        // when they should only affect their own respective Examples panels
+        const patternOneOfSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            dependencies: {
+              title: 'Dependencies',
+              type: 'object',
+              description:
+                'Object defining package dependencies with version constraints.',
+              patternProperties: {
+                '^[a-zA-Z0-9_.-]+$': {
+                  description:
+                    'The value serves as a human-readable identifier for the dependency.',
+                  oneOf: [
+                    {
+                      type: 'string',
+                      enum: ['*'],
+                      description: 'Version string',
+                      examples: ['*'],
+                    },
+                    {
+                      type: 'object',
+                      description: 'Version object with advanced configuration',
+                      properties: {
+                        ext: {
+                          type: 'string',
+                          description: 'Extension name to reference.',
+                          examples: ['avocado-ext-dev'],
+                        },
+                        vsn: {
+                          type: 'string',
+                          enum: ['*'],
+                          examples: ['*'],
+                        },
+                        config: {
+                          type: 'string',
+                          description: 'Path to config file.',
+                          examples: ['extensions/sshd-dev/avocado.toml'],
+                        },
+                      },
+                      examples: [
+                        { ext: 'avocado-ext-dev', vsn: '*' },
+                        {
+                          ext: 'avocado-rust-ext',
+                          config: 'extensions/sshd-dev/avocado.toml',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+              additionalProperties: false,
+              // Parent property also has examples to create dual Examples panels
+              examples: [
+                {
+                  'avocado-img-bootfiles': '*',
+                  'avocado-img-rootfs': '*',
+                  'avocado-ext-dev': {
+                    ext: 'avocado-ext-dev',
+                    vsn: '*',
+                  },
+                },
+              ],
+            },
+          },
+        };
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+        const { container } = render(
+          <DeckardSchema
+            schema={patternOneOfSchema}
+            options={{
+              includeExamples: true,
+              examplesOnFocusOnly: false,
+              collapsible: true,
+            }}
+          />
+        );
 
-      expect(screen.getByText('Focus search box')).toBeInTheDocument();
-      expect(screen.getByText('Clear search')).toBeInTheDocument();
-      expect(screen.getByText('Close tooltips')).toBeInTheDocument();
-    });
+        // Step 1: Expand dependencies property to reveal pattern property
+        const dependenciesExpandButton = container.querySelector(
+          '[data-property-key="dependencies"] .expand-button'
+        );
+        expect(dependenciesExpandButton).toBeInTheDocument();
+        fireEvent.click(dependenciesExpandButton!);
 
-    test('displays examples shortcut as "Show examples" when examples are hidden', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+        await waitFor(() => {
+          // Both parent and pattern properties should show Examples panels
+          const dependenciesRow = container.querySelector(
+            '[data-property-key="dependencies"]'
+          );
+          expect(dependenciesRow?.classList.contains('has-examples')).toBe(
+            true
+          );
 
-      // Press 'e' key to hide examples
-      fireEvent.keyDown(document, { key: 'e' });
+          const patternRow = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"]'
+          );
+          expect(patternRow).toBeInTheDocument();
+        });
 
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+        // Step 2: Expand pattern property to show its oneOf selector and Examples panel
+        const patternExpandButton = container.querySelector(
+          '[data-property-key="dependencies.(pattern-0)"] .expand-button'
+        );
+        expect(patternExpandButton).toBeInTheDocument();
+        fireEvent.click(patternExpandButton!);
 
-      expect(screen.getByText('Show examples')).toBeInTheDocument();
-    });
+        await waitFor(() => {
+          const patternRow = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"]'
+          );
+          expect(patternRow?.classList.contains('expanded')).toBe(true);
+          expect(patternRow?.classList.contains('has-examples')).toBe(false);
 
-    test('displays examples shortcut as "Hide examples" when examples are shown', () => {
-      render(<DeckardSchema schema={mockSchema} />);
+          // Should have oneOf selector tabs for pattern property
+          const oneOfTabs = patternRow!.querySelectorAll('.oneof-tab');
+          expect(oneOfTabs).toHaveLength(2);
 
-      // Examples are shown by default, so we should see "Hide examples"
-      const keyboardButton = screen.getByLabelText('View keyboard shortcuts');
-      fireEvent.click(keyboardButton);
+          // Should have OneOfSelector Examples panel for pattern property (oneOf options have examples)
+          const patternOneOfExamplesPanel = patternRow!.querySelector(
+            '.oneof-examples-section .examples-panel'
+          );
+          expect(patternOneOfExamplesPanel).toBeInTheDocument();
+        });
 
-      expect(screen.getByText('Hide examples')).toBeInTheDocument();
+        // Step 3: Get initial state of Examples panels
+        let dependenciesExamplesPanel = container.querySelector(
+          '[data-property-key="dependencies"] .examples-panel'
+        );
+        let patternOneOfExamplesPanel = container.querySelector(
+          '[data-property-key="dependencies.(pattern-0)"] .oneof-examples-section .examples-panel'
+        );
+
+        // Get initial examples content
+        const initialDependenciesExamples =
+          dependenciesExamplesPanel?.textContent;
+        const initialPatternOneOfExamples =
+          patternOneOfExamplesPanel?.textContent;
+
+        expect(initialDependenciesExamples).toBeTruthy();
+        expect(patternOneOfExamplesPanel).toBeInTheDocument();
+
+        // Step 4: Click the second oneOf tab (should only affect pattern property Examples panel)
+        const patternOneOfTabs = container.querySelectorAll(
+          '[data-property-key="dependencies.(pattern-0)"] .oneof-tab'
+        );
+        expect(patternOneOfTabs).toHaveLength(2);
+
+        // Click the second tab (index 1) - this should only affect the pattern property
+        fireEvent.click(patternOneOfTabs[1]);
+
+        await waitFor(() => {
+          // Re-get the Examples panels after the click
+          dependenciesExamplesPanel = container.querySelector(
+            '[data-property-key="dependencies"] .examples-panel'
+          );
+          patternOneOfExamplesPanel = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"] .oneof-examples-section .examples-panel'
+          );
+
+          const newDependenciesExamples =
+            dependenciesExamplesPanel?.textContent;
+          const newPatternOneOfExamples =
+            patternOneOfExamplesPanel?.textContent;
+
+          // Test the isolation - clicking pattern property oneOf tabs should not affect parent Examples panel
+          expect(newDependenciesExamples).toBe(initialDependenciesExamples);
+
+          // OneOf examples should change when clicking different oneOf tabs
+          expect(newPatternOneOfExamples).not.toBe(initialPatternOneOfExamples);
+          expect(patternOneOfExamplesPanel).toBeInTheDocument();
+        });
+      });
+
+      test('reproduce exact user schema issue with runtime dependencies', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
+
+        // This reproduces the exact structure from the user's avocado-config schema
+        const userSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            runtime: {
+              type: 'object',
+              description:
+                'Default dependencies for all runtimes, as well as per-runtime overrides.',
+              properties: {
+                dependencies: {
+                  title: 'Dependencies',
+                  type: 'object',
+                  description:
+                    'Object defining package and extension dependencies with version constraints.',
+                  patternProperties: {
+                    '^[a-zA-Z0-9_.-]+$': {
+                      description:
+                        'Keys specified to match this pattern are either an existing package name or an arbitrary identifier when specifying a version object with an ext key.',
+                      oneOf: [
+                        {
+                          type: 'string',
+                          enum: ['*'],
+                          description:
+                            'A semantic version string per https://semver.org/.',
+                          examples: ['*'],
+                        },
+                        {
+                          type: 'object',
+                          description:
+                            'For advanced dependency configuration, an object can be supplied.',
+                          properties: {
+                            ext: {
+                              type: 'string',
+                              description: 'Extension name to reference.',
+                              examples: ['avocado-ext-dev'],
+                            },
+                            vsn: {
+                              type: 'string',
+                              enum: ['*'],
+                              examples: ['*'],
+                            },
+                            config: {
+                              type: 'string',
+                              description:
+                                'Include an extension from another Avocado config by specifying a path to the other config.',
+                              examples: ['extensions/sshd-dev/avocado.toml'],
+                            },
+                          },
+                          examples: [
+                            { ext: 'avocado-ext-dev', vsn: '*' },
+                            {
+                              ext: 'avocado-rust-ext',
+                              config: 'extensions/sshd-dev/avocado.toml',
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                  additionalProperties: false,
+                  examples: [
+                    {
+                      'avocado-img-bootfiles': '*',
+                      'avocado-img-rootfs': '*',
+                      'avocado-img-initramfs': '*',
+                      'avocado-ext-dev': {
+                        ext: 'avocado-ext-dev',
+                        vsn: '*',
+                      },
+                      'example-rust-ext': {
+                        ext: 'example-rust-ext',
+                        config: 'extensions/sshd-dev/avocado.toml',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        };
+
+        const { container } = render(
+          <DeckardSchema
+            schema={userSchema}
+            options={{
+              includeExamples: true,
+              examplesOnFocusOnly: false,
+              collapsible: true,
+            }}
+          />
+        );
+
+        // Navigate to runtime -> dependencies -> pattern property structure
+        const runtimeExpandButton = container.querySelector(
+          '[data-property-key="runtime"] .expand-button'
+        );
+        fireEvent.click(runtimeExpandButton!);
+
+        await waitFor(() => {
+          const dependenciesExpandButton = container.querySelector(
+            '[data-property-key="runtime.dependencies"] .expand-button'
+          );
+          expect(dependenciesExpandButton).toBeInTheDocument();
+          fireEvent.click(dependenciesExpandButton!);
+        });
+
+        await waitFor(() => {
+          // Should have both parent dependencies and pattern property with Examples panels
+          const dependenciesRow = container.querySelector(
+            '[data-property-key="runtime.dependencies"]'
+          );
+          const patternRow = container.querySelector(
+            '[data-property-key="runtime.dependencies.(pattern-0)"]'
+          );
+
+          expect(dependenciesRow?.classList.contains('has-examples')).toBe(
+            true
+          );
+          expect(patternRow).toBeInTheDocument();
+        });
+
+        // Expand the pattern property
+        const patternExpandButton = container.querySelector(
+          '[data-property-key="runtime.dependencies.(pattern-0)"] .expand-button'
+        );
+        fireEvent.click(patternExpandButton!);
+
+        await waitFor(() => {
+          const patternRow = container.querySelector(
+            '[data-property-key="runtime.dependencies.(pattern-0)"]'
+          );
+          expect(patternRow?.classList.contains('expanded')).toBe(true);
+          expect(patternRow?.classList.contains('has-examples')).toBe(false);
+
+          // Should have oneOf tabs
+          const oneOfTabs = patternRow?.querySelectorAll('.oneof-tab');
+          expect(oneOfTabs).toHaveLength(2);
+
+          // Should have Examples panel for parent but NOT main Examples panel for pattern property
+          const dependenciesExamplesPanel = container.querySelector(
+            '[data-property-key="runtime.dependencies"] .examples-panel'
+          );
+          // Pattern property should have OneOfSelector examples instead of main Examples panel
+          const patternOneOfExamplesPanel = container.querySelector(
+            '[data-property-key="runtime.dependencies.(pattern-0)"] .oneof-examples-section .examples-panel'
+          );
+
+          expect(dependenciesExamplesPanel).toBeInTheDocument();
+          expect(patternOneOfExamplesPanel).toBeInTheDocument();
+
+          // Test the isolation: clicking pattern property oneOf tabs should not affect parent Examples panel
+          const initialDependenciesContent =
+            dependenciesExamplesPanel?.textContent;
+          const initialPatternOneOfContent =
+            patternOneOfExamplesPanel?.textContent;
+
+          // Click second oneOf tab for pattern property
+          const patternOneOfTabs = patternRow?.querySelectorAll('.oneof-tab');
+          fireEvent.click(patternOneOfTabs![1]);
+
+          // Check that parent Examples panel unchanged but OneOf examples changed
+          const finalDependenciesContent =
+            dependenciesExamplesPanel?.textContent;
+          const finalPatternOneOfExamplesPanel = container.querySelector(
+            '[data-property-key="runtime.dependencies.(pattern-0)"] .oneof-examples-section .examples-panel'
+          );
+          const finalPatternOneOfContent =
+            finalPatternOneOfExamplesPanel?.textContent;
+
+          expect(finalDependenciesContent).toBe(initialDependenciesContent);
+          expect(finalPatternOneOfContent).not.toBe(initialPatternOneOfContent);
+          expect(finalPatternOneOfExamplesPanel).toBeInTheDocument();
+        });
+      });
+
+      test('pattern property without examples should not show examples from oneOf options', async () => {
+        // Mock window.matchMedia for this test
+        const mockMatchMedia = vi.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: mockMatchMedia,
+        });
+
+        // This test reproduces the issue where a pattern property without its own examples
+        // errantly falls back to showing examples from its oneOf options
+        const patternWithoutExamplesSchema: JsonSchema = {
+          type: 'object',
+          properties: {
+            dependencies: {
+              title: 'Dependencies',
+              type: 'object',
+              description:
+                'Object defining package and extension dependencies with version constraints.',
+              patternProperties: {
+                '^[a-zA-Z0-9_.-]+$': {
+                  description:
+                    'Keys specified to match this pattern are either an existing package name or an arbitrary identifier.',
+                  // NOTE: No examples property here - this is the key test case
+                  oneOf: [
+                    {
+                      type: 'string',
+                      enum: ['*'],
+                      description: 'Version string',
+                      examples: ['*'], // OneOf option has examples but pattern property doesn't
+                    },
+                    {
+                      type: 'object',
+                      description: 'Version object',
+                      properties: {
+                        ext: { type: 'string' },
+                        vsn: { type: 'string' },
+                      },
+                      examples: [{ ext: 'test-ext', vsn: '*' }], // OneOf option has examples
+                    },
+                  ],
+                },
+              },
+              additionalProperties: false,
+              examples: [{ 'test-package': '*' }], // Parent has examples
+            },
+          },
+        };
+
+        const { container } = render(
+          <DeckardSchema
+            schema={patternWithoutExamplesSchema}
+            options={{
+              includeExamples: true,
+              examplesOnFocusOnly: false,
+              collapsible: true,
+            }}
+          />
+        );
+
+        // Expand dependencies property
+        const dependenciesExpandButton = container.querySelector(
+          '[data-property-key="dependencies"] .expand-button'
+        );
+        fireEvent.click(dependenciesExpandButton!);
+
+        await waitFor(() => {
+          // Dependencies property should show Examples panel (has examples)
+          const dependenciesRow = container.querySelector(
+            '[data-property-key="dependencies"]'
+          );
+          expect(dependenciesRow?.classList.contains('has-examples')).toBe(
+            true
+          );
+
+          // Pattern property should exist but NOT have Examples panel (no examples)
+          const patternRow = container.querySelector(
+            '[data-property-key="dependencies.(pattern-0)"]'
+          );
+          expect(patternRow).toBeInTheDocument();
+
+          // CRITICAL: Pattern property should NOT have Examples panel since it has no examples
+          // Even though its oneOf options have examples, the pattern property itself doesn't
+          expect(patternRow?.classList.contains('has-examples')).toBe(false);
+
+          // Should not find an Examples panel for the pattern property
+          const patternExamplesPanel =
+            patternRow?.querySelector('.examples-panel');
+          expect(patternExamplesPanel).toBeNull();
+        });
+      });
     });
   });
 });

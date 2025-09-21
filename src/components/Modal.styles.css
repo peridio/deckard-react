@@ -219,7 +219,3 @@
 }
 
 /* ===== CUSTOM PROPERTIES FOR THEMING ===== */
-
-.schema-container {
-  --schema-radius-lg: 0.75rem;
-}

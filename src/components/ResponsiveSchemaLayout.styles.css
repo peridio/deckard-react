@@ -1,0 +1,114 @@
+/* ResponsiveSchemaLayout - Reusable responsive 1/2 column layout component */
+
+.responsive-schema-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.responsive-schema-layout-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--schema-space-lg);
+  align-items: flex-start;
+}
+
+.responsive-schema-layout-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.responsive-schema-layout-right {
+  min-width: 0;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Split layout specific styles */
+.responsive-schema-layout-split .responsive-schema-layout-left {
+  padding-right: var(--schema-space-sm);
+}
+
+.responsive-schema-layout-split .responsive-schema-layout-right {
+  padding-left: var(--schema-space-md);
+  border-left: 1px solid var(--schema-border-subtle);
+}
+
+/* Media query breakpoint for larger screens */
+@media (max-width: 1024px) {
+  .responsive-schema-layout-split {
+    grid-template-columns: 1fr;
+    gap: var(--schema-space-md);
+  }
+
+  .responsive-schema-layout-split .responsive-schema-layout-left {
+    padding-right: 0;
+  }
+
+  .responsive-schema-layout-split .responsive-schema-layout-right {
+    border-left: none;
+    border-top: 1px solid var(--schema-border-subtle);
+    padding-left: 0;
+    padding-top: var(--schema-space-md);
+  }
+}
+
+/* Container query for tight spaces */
+@container (max-width: 900px) {
+  .responsive-schema-layout-split {
+    grid-template-columns: 1fr;
+    gap: var(--schema-space-md);
+  }
+
+  .responsive-schema-layout-split .responsive-schema-layout-left {
+    padding-right: 0;
+  }
+
+  .responsive-schema-layout-split .responsive-schema-layout-right {
+    border-left: none;
+    border-top: 1px solid var(--schema-border-subtle);
+    padding-left: 0;
+    padding-top: var(--schema-space-md);
+  }
+}
+
+/* Additional responsive behavior for smaller screens */
+@media (max-width: 640px) {
+  .responsive-schema-layout-split {
+    gap: var(--schema-space-sm);
+  }
+
+  .responsive-schema-layout-split .responsive-schema-layout-right {
+    padding-top: var(--schema-space-sm);
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .responsive-schema-layout-split .responsive-schema-layout-right {
+    border-left-color: var(--schema-border-subtle);
+    border-top-color: var(--schema-border-subtle);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .responsive-schema-layout,
+  .responsive-schema-layout-left,
+  .responsive-schema-layout-right {
+    transition: none;
+  }
+}

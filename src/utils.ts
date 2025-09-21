@@ -1,4 +1,9 @@
-import { JsonSchema, SchemaProperty, PropertyConstraint } from './types';
+import {
+  JsonSchema,
+  JsonValue,
+  SchemaProperty,
+  PropertyConstraint,
+} from './types';
 
 // JSON Schema $ref resolver
 export function resolveReference(
@@ -144,13 +149,8 @@ export function extractProperties(
     });
   }
 
-  // Handle pattern properties (but not if they're inside oneOf/anyOf constructs)
-
-  if (
-    resolvedSchema.patternProperties &&
-    !resolvedSchema.oneOf &&
-    !resolvedSchema.anyOf
-  ) {
+  // Handle pattern properties
+  if (resolvedSchema.patternProperties) {
     Object.entries(resolvedSchema.patternProperties).forEach(
       ([pattern, propSchema], index) => {
         // Use (pattern-index) format for pattern property keys
@@ -168,8 +168,10 @@ export function extractProperties(
         // Create a synthetic schema that includes pattern information
         const syntheticSchema = {
           ...resolvedPropSchema,
-          // Keep original description without pattern info
-          description: resolvedPropSchema.description,
+          // Keep original description, but enhance it for pattern properties
+          description:
+            resolvedPropSchema.description ||
+            'Dynamic property matching the pattern',
           // Add a custom property to identify this as a pattern property
           __isPatternProperty: true,
           __pattern: pattern,
@@ -189,8 +191,69 @@ export function extractProperties(
   return properties;
 }
 
-export function hasExamples(schema: JsonSchema): boolean {
-  return !!(schema.examples && schema.examples.length > 0);
+export function hasExamples(
+  schema: JsonSchema,
+  rootSchema?: JsonSchema
+): boolean {
+  // First check if schema itself has examples
+  if (schema.examples && schema.examples.length > 0) {
+    return true;
+  }
+
+  // If rootSchema provided, check if any oneOf options have examples
+  // But skip this for pattern properties - their oneOf examples are handled by OneOfSelector
+  if (
+    schema.oneOf &&
+    Array.isArray(schema.oneOf) &&
+    rootSchema &&
+    !schema.__isPatternProperty
+  ) {
+    return schema.oneOf.some(option => {
+      // Resolve $ref if present
+      const resolvedOption = resolveSchema(option, rootSchema);
+      return resolvedOption.examples && resolvedOption.examples.length > 0;
+    });
+  }
+
+  // Check patternProperties for examples (only check if pattern property itself has examples)
+  if (schema.patternProperties && rootSchema) {
+    return Object.values(schema.patternProperties).some(patternSchema => {
+      const resolvedPattern = resolveSchema(patternSchema, rootSchema);
+      // Only check if pattern property itself has examples, not its oneOf options
+      // oneOf examples are handled by the OneOfSelector component
+      return resolvedPattern.examples && resolvedPattern.examples.length > 0;
+    });
+  }
+
+  return false;
+}
+
+export function getExamplesFromOneOf(
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  selectedIndex: number = 0
+): JsonValue[] {
+  // First check if schema itself has examples
+  if (schema.examples && schema.examples.length > 0) {
+    return schema.examples;
+  }
+
+  // If it's a oneOf schema, get examples from the selected option
+  if (
+    schema.oneOf &&
+    Array.isArray(schema.oneOf) &&
+    schema.oneOf[selectedIndex]
+  ) {
+    const selectedOption = resolveSchema(
+      schema.oneOf[selectedIndex],
+      rootSchema
+    );
+    if (selectedOption.examples && selectedOption.examples.length > 0) {
+      return selectedOption.examples;
+    }
+  }
+
+  return [];
 }
 
 export function getSchemaType(
@@ -524,4 +587,14 @@ export function propertyKeyToHash(propertyKey: string): string {
 
   // Handle pattern properties: preserve dots within parentheses, convert others to dashes
   return propertyKey.replace(/\.(?![^(]*\))/g, '-');
+}
+
+/**
+ * Extracts oneOf selection index from a property path.
+ * Example: "dependencies.oneOf.1.config" -> 1
+ * Returns 0 if no oneOf selection is found or if invalid.
+ */
+export function extractOneOfIndexFromPath(propertyPath: string): number {
+  const match = propertyPath.match(/\.oneOf\.(\d+)(?:\.|$)/);
+  return match ? parseInt(match[1], 10) : 0;
 }

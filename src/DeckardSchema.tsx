@@ -497,6 +497,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
   }, [schema, autoExpand]);
 
   // Handle URL hash navigation - only on mount
+  // Handle URL hash navigation - only on mount
   useEffect(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     if (hash) {
@@ -533,27 +534,8 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
       // Set the focused property state for proper styling
       setFocusedProperty(fieldKey);
-
-      // Focus and scroll to the target property after React renders
-      setTimeout(() => {
-        if (typeof document !== 'undefined') {
-          const targetElement = document.getElementById(
-            propertyKeyToHash(fieldKey)
-          );
-          if (
-            targetElement &&
-            typeof targetElement.scrollIntoView === 'function'
-          ) {
-            targetElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start',
-            });
-            targetElement.focus({ preventScroll: true });
-          }
-        }
-      }, 100);
     }
-  }, []); // Empty dependency array - only run on mount
+  }, []);
 
   // Update search results
   useEffect(() => {

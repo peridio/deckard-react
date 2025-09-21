@@ -6,13 +6,7 @@ import {
   PropertyState,
 } from '../types';
 import { getConstraints, getUnsupportedFeatures } from '../utils';
-import {
-  Badge,
-  BadgeGroup,
-  OneOfSelector,
-  AllOfSelector,
-  SchemaWarning,
-} from '../components';
+import { Badge, BadgeGroup, AllOfSelector, SchemaWarning } from '../components';
 import CodeSnippet from './CodeSnippet';
 
 interface PropertyDetailsProps {
@@ -26,6 +20,11 @@ interface PropertyDetailsProps {
   onFocusChange?: (propertyKey: string | null) => void;
   options?: { defaultExampleLanguage?: 'json' | 'yaml' | 'toml' };
   searchQuery?: string;
+  inSplitLayout?: boolean;
+  onOneOfSelectionChange?: (
+    selectedIndex: number,
+    selectedOption: JsonSchema
+  ) => void;
 }
 
 const PropertyDetails: React.FC<PropertyDetailsProps> = ({
@@ -39,6 +38,8 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   onFocusChange,
   options,
   searchQuery,
+  inSplitLayout: _inSplitLayout = false,
+  onOneOfSelectionChange: _onOneOfSelectionChange,
 }) => {
   const constraints = getConstraints(property.schema);
 
@@ -62,23 +63,6 @@ const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         <div className="property-description-block">
           {property.schema.description}
         </div>
-      )}
-
-      {/* Handle oneOf scenarios */}
-      {property.schema.oneOf && rootSchema && (
-        <OneOfSelector
-          oneOfOptions={property.schema.oneOf}
-          rootSchema={rootSchema}
-          propertyPath={property.path}
-          _onCopy={onCopy}
-          onCopyLink={onCopyLink}
-          propertyStates={propertyStates}
-          toggleProperty={toggleProperty}
-          focusedProperty={focusedProperty}
-          onFocusChange={onFocusChange}
-          options={options}
-          searchQuery={searchQuery}
-        />
       )}
 
       {/* Handle allOf scenarios */}

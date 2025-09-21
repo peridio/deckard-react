@@ -1,4 +1,9 @@
-import { getSchemaType, hashToPropertyKey, propertyKeyToHash } from '../utils';
+import {
+  getSchemaType,
+  hashToPropertyKey,
+  propertyKeyToHash,
+  extractOneOfIndexFromPath,
+} from '../utils';
 import type { JsonSchema, SchemaType } from '../types';
 
 describe('getSchemaType', () => {
@@ -311,6 +316,33 @@ describe('getSchemaType', () => {
       };
 
       expect(getEnumId(defaultTargetSchema)).toBe('target');
+    });
+
+    describe('extractOneOfIndexFromPath', () => {
+      it('should extract oneOf index from property path', () => {
+        expect(extractOneOfIndexFromPath('dependencies.oneOf.0.config')).toBe(
+          0
+        );
+        expect(extractOneOfIndexFromPath('dependencies.oneOf.1.ext')).toBe(1);
+        expect(extractOneOfIndexFromPath('dependencies.oneOf.2.vsn')).toBe(2);
+      });
+
+      it('should return 0 for paths without oneOf', () => {
+        expect(extractOneOfIndexFromPath('dependencies.config')).toBe(0);
+        expect(extractOneOfIndexFromPath('simple.property')).toBe(0);
+        expect(extractOneOfIndexFromPath('')).toBe(0);
+      });
+
+      it('should handle oneOf at the end of path', () => {
+        expect(extractOneOfIndexFromPath('dependencies.oneOf.3')).toBe(3);
+      });
+
+      it('should handle invalid oneOf indices', () => {
+        expect(
+          extractOneOfIndexFromPath('dependencies.oneOf.invalid.config')
+        ).toBe(0);
+        expect(extractOneOfIndexFromPath('dependencies.oneOf..config')).toBe(0);
+      });
     });
   });
 });

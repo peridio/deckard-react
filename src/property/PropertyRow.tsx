@@ -15,9 +15,11 @@ import {
   extractProperties,
   hashToPropertyKey,
   propertyKeyToHash,
+  resolveSchema,
+  extractOneOfIndexFromPath,
 } from '../utils';
 import ExamplesPanel from './ExamplesPanel';
-import { Badge, Tooltip } from '../components';
+import { Badge, Tooltip, OneOfSelector } from '../components';
 import Row from '../Row';
 import PropertyDetails from './PropertyDetails';
 import Rows from '../Rows';
@@ -136,17 +138,112 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   examplesHidden = false,
 }) => {
   const [isActiveRoute, setIsActiveRoute] = useState(false);
+  const [selectedOneOfOption, setSelectedOneOfOption] =
+    useState<JsonSchema | null>(null);
+  const [selectedOneOfIndex, setSelectedOneOfIndex] = useState<number>(0);
 
   // Check if schema is valid
   const hasValidSchema = property.schema != null;
 
+  // Initialize selectedOneOfOption for oneOf properties with hash-based selection
+  useEffect(() => {
+    if (
+      property.schema.oneOf &&
+      property.schema.oneOf.length > 0 &&
+      rootSchema
+    ) {
+      // Determine initial selected index from URL hash
+      let initialSelectedIndex = 0;
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash;
+        if (hash) {
+          const propertyKeyFromHash = hashToPropertyKey(hash);
+          const hashIndex = extractOneOfIndexFromPath(propertyKeyFromHash);
+          if (hashIndex >= 0 && hashIndex < property.schema.oneOf.length) {
+            initialSelectedIndex = hashIndex;
+          }
+        }
+      }
+
+      const selectedOption = property.schema.oneOf[initialSelectedIndex];
+      const resolvedOption = resolveSchema(selectedOption, rootSchema);
+      setSelectedOneOfOption(resolvedOption);
+      setSelectedOneOfIndex(initialSelectedIndex);
+    }
+  }, [property.schema.oneOf, rootSchema]);
+
+  // Listen for hash changes to update oneOf selection
+  useEffect(() => {
+    if (
+      !property.schema.oneOf ||
+      property.schema.oneOf.length === 0 ||
+      !rootSchema ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (!hash) return;
+
+      const propertyKeyFromHash = hashToPropertyKey(hash);
+      const hashIndex = extractOneOfIndexFromPath(propertyKeyFromHash);
+
+      // Only update if the hash is for this property and has a different oneOf index
+      if (
+        propertyKeyFromHash.startsWith(propertyKey) &&
+        hashIndex >= 0 &&
+        hashIndex < property.schema.oneOf!.length
+      ) {
+        const selectedOption = property.schema.oneOf![hashIndex];
+        const resolvedOption = resolveSchema(selectedOption, rootSchema);
+        setSelectedOneOfOption(resolvedOption);
+        setSelectedOneOfIndex(hashIndex);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [property.schema.oneOf, rootSchema, propertyKey]);
+
+  // Determine if this property should be in split layout
+  // For oneOf properties, only show split layout if the selected option has examples
+  const isInSplitLayout = useMemo(() => {
+    if (!includeExamples || examplesHidden) return false;
+    if (examplesOnFocusOnly && focusedProperty !== propertyKey) return false;
+
+    // For oneOf properties, check if selected option has examples
+    if (property.schema.oneOf) {
+      // If we have a selectedOneOfOption, use it
+      if (selectedOneOfOption) {
+        return hasExamples(selectedOneOfOption, rootSchema);
+      }
+      // If selectedOneOfOption is not set yet (timing issue),
+      // fall back to checking if any oneOf option has examples
+      return hasExamples(property.schema, rootSchema);
+    }
+
+    // For regular properties, use existing logic
+    return hasExamples(property.schema, rootSchema);
+  }, [
+    includeExamples,
+    examplesHidden,
+    examplesOnFocusOnly,
+    focusedProperty,
+    propertyKey,
+    property.schema,
+    selectedOneOfOption,
+    rootSchema,
+  ]);
+
   // Extract nested properties if this property has them
-  // Skip extraction if schema has oneOf/allOf as these are handled by selectors
   const nestedProperties = useMemo(() => {
     if (!rootSchema || !hasValidSchema) return [];
 
     // Don't extract nested properties if schema has oneOf or allOf
-    // as these are already handled by OneOfSelector/AllOfSelector components
+    // as these are handled by OneOfSelector/AllOfSelector components
+    // The oneOf nested properties will be handled by the sibling container
     if (property.schema.oneOf || property.schema.allOf) {
       return [];
     }
@@ -173,6 +270,57 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
 
   const hasNestedProperties = nestedProperties.length > 0;
 
+  // Handle oneOf selection changes
+  const handleOneOfSelectionChange = useCallback(
+    (selectedIndex: number, selectedOption: JsonSchema) => {
+      setSelectedOneOfOption(selectedOption);
+      setSelectedOneOfIndex(selectedIndex);
+    },
+    []
+  );
+
+  // Extract oneOf nested properties for sibling container rendering
+  const oneOfNestedProperties = useMemo(() => {
+    if (
+      !rootSchema ||
+      !hasValidSchema ||
+      !property.schema.oneOf ||
+      !selectedOneOfOption
+    ) {
+      return [];
+    }
+
+    // Always extract nested properties if the selected option has them
+    if (selectedOneOfOption.properties) {
+      const selectedIndex = property.schema.oneOf.findIndex(
+        option =>
+          option === selectedOneOfOption ||
+          (option.$ref &&
+            selectedOneOfOption.$ref &&
+            option.$ref === selectedOneOfOption.$ref)
+      );
+
+      return extractProperties(
+        selectedOneOfOption,
+        [...property.path, 'oneOf', selectedIndex.toString()],
+        property.depth + 1,
+        rootSchema,
+        []
+      );
+    }
+
+    return [];
+  }, [
+    property.schema.oneOf,
+    selectedOneOfOption,
+    rootSchema,
+    hasValidSchema,
+    property.path,
+    property.depth,
+  ]);
+
+  const hasOneOfNestedProperties = oneOfNestedProperties.length > 0;
+
   // Check if current URL hash matches this property's link
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -183,7 +331,25 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
       const hash = window.location.hash;
       // Convert hash format to property key format, properly handling pattern properties
       const fieldKey = hashToPropertyKey(hash);
-      setIsActiveRoute(fieldKey === propertyKey);
+
+      // Check for exact match
+      if (fieldKey === propertyKey) {
+        setIsActiveRoute(true);
+        return;
+      }
+
+      // Check for oneOf selection match (e.g., "property.oneOf.0" should match "property")
+      if (property.schema.oneOf && property.schema.oneOf.length > 0) {
+        const oneOfRegex = new RegExp(
+          `^${propertyKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.oneOf\\.[0-9]+$`
+        );
+        if (oneOfRegex.test(fieldKey)) {
+          setIsActiveRoute(true);
+          return;
+        }
+      }
+
+      setIsActiveRoute(false);
     };
 
     checkActiveRoute();
@@ -192,7 +358,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
     window.addEventListener('hashchange', handleHashChange);
 
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [propertyKey]);
+  }, [propertyKey, property.schema.oneOf]);
 
   const schemaType = getSchemaType(property.schema, rootSchema);
 
@@ -247,9 +413,16 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
   // Generate the anchor URL for the link
   const linkHref = useMemo(() => {
     if (typeof window === 'undefined') return '#';
-    const anchor = `#${propertyKeyToHash(propertyKey)}`;
+
+    // Include oneOf selection in the anchor if this property has oneOf options
+    let linkPropertyKey = propertyKey;
+    if (property.schema.oneOf && property.schema.oneOf.length > 0) {
+      linkPropertyKey = `${propertyKey}.oneOf.${selectedOneOfIndex}`;
+    }
+
+    const anchor = `#${propertyKeyToHash(linkPropertyKey)}`;
     return `${window.location.origin}${window.location.pathname}${anchor}`;
-  }, [propertyKey]);
+  }, [propertyKey, property.schema.oneOf, selectedOneOfIndex]);
 
   const handleFieldClick = useCallback(
     (e: React.MouseEvent) => {
@@ -293,6 +466,8 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
         onFocusChange={onFocusChange}
         options={options}
         searchQuery={searchQuery}
+        inSplitLayout={isInSplitLayout}
+        onOneOfSelectionChange={handleOneOfSelectionChange}
       />
     );
   }, [
@@ -306,6 +481,8 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
     onFocusChange,
     options,
     searchQuery,
+    isInSplitLayout,
+    handleOneOfSelectionChange,
   ]);
 
   const propertyClasses = [
@@ -313,7 +490,9 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
     property.depth > 0 ? 'nested-property' : '',
     state.expanded ? 'expanded' : '',
     property.depth > 0 ? `depth-${Math.min(property.depth, 3)}` : '',
-    includeExamples && hasValidSchema && hasExamples(property.schema)
+    includeExamples &&
+    hasValidSchema &&
+    hasExamples(property.schema, rootSchema)
       ? 'has-examples'
       : '',
     !hasValidSchema ? 'invalid-schema' : '',
@@ -328,6 +507,14 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
       data-property-key={propertyKey}
       onClick={handleFieldClick}
     >
+      {/* Hidden anchor for oneOf selection to enable native browser scrolling */}
+      {property.schema.oneOf && property.schema.oneOf.length > 0 && (
+        <span
+          id={propertyKeyToHash(`${propertyKey}.oneOf.${selectedOneOfIndex}`)}
+          style={{ position: 'absolute', visibility: 'hidden' }}
+          aria-hidden="true"
+        />
+      )}
       <div
         className="row-header-container property-header-container"
         onClick={handleHeaderClick}
@@ -391,7 +578,7 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
               </span>
             </Tooltip>
           )}
-          {examplesHidden && hasExamples(property.schema) && (
+          {examplesHidden && hasExamples(property.schema, rootSchema) && (
             <Tooltip
               title="Examples hidden"
               content="Examples are available for this property but are currently hidden. Press 'e' to show examples."
@@ -532,72 +719,123 @@ const PropertyRow: React.FC<PropertyRowProps> = ({
 
       {state.expanded && hasValidSchema && (
         <>
-          <div
-            className={`schema-details ${includeExamples && !examplesHidden && hasExamples(property.schema) && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
-            data-has-examples={hasExamples(property.schema)}
-            data-include-examples={includeExamples}
-            data-split-active={
-              includeExamples &&
-              !examplesHidden &&
-              hasExamples(property.schema) &&
-              (examplesOnFocusOnly ? focusedProperty === propertyKey : true)
-            }
-          >
-            {includeExamples &&
-            !examplesHidden &&
-            hasExamples(property.schema) &&
-            (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? (
-              <>
-                <div className="schema-details-left">
-                  {renderPropertyDetails()}
-                </div>
-                <div
-                  className="schema-details-right"
-                  data-debug="examples-panel-container"
-                >
-                  {rootSchema ? (
-                    <ExamplesPanel
-                      currentProperty={property.schema}
+          <div className="property-content-container">
+            <div
+              className={`schema-details ${isInSplitLayout ? 'schema-details-split' : ''}`}
+              data-has-examples={hasExamples(property.schema, rootSchema)}
+              data-include-examples={includeExamples}
+              data-split-active={isInSplitLayout}
+            >
+              {isInSplitLayout ? (
+                <>
+                  <div className="schema-details-left">
+                    {renderPropertyDetails()}
+                  </div>
+                  <div
+                    className="schema-details-right"
+                    data-debug="examples-panel-container"
+                  >
+                    {rootSchema &&
+                      hasExamples(
+                        selectedOneOfOption || property.schema,
+                        rootSchema
+                      ) &&
+                      !(
+                        property.schema.__isPatternProperty &&
+                        !hasExamples(property.schema, rootSchema)
+                      ) && (
+                        <ExamplesPanel
+                          currentProperty={
+                            property.schema.__isPatternProperty
+                              ? {
+                                  ...property.schema,
+                                  // Remove oneOf to prevent fallback to oneOf examples
+                                  // when pattern property itself has no examples
+                                  oneOf:
+                                    (property.schema.examples?.length ?? 0) > 0
+                                      ? property.schema.oneOf
+                                      : undefined,
+                                }
+                              : selectedOneOfOption || property.schema
+                          }
+                          rootSchema={rootSchema}
+                          propertyPath={property.path || [propertyKey]}
+                          onCopy={onCopy}
+                          options={options}
+                        />
+                      )}
+                  </div>
+                </>
+              ) : (
+                renderPropertyDetails()
+              )}
+            </div>
+            {/* Sibling container for full-width nested properties */}
+            {(hasNestedProperties ||
+              hasOneOfNestedProperties ||
+              property.schema.oneOf) && (
+              <div className="nested-fields-sibling">
+                {hasNestedProperties && (
+                  <Rows
+                    className="nested-properties"
+                    properties={nestedProperties}
+                    propertyStates={propertyStates || {}}
+                    onToggle={propertyKey => toggleProperty?.(propertyKey)}
+                    onCopy={onCopy}
+                    onCopyLink={onCopyLink}
+                    collapsible={collapsible}
+                    includeExamples={includeExamples && !examplesHidden}
+                    examplesOnFocusOnly={examplesOnFocusOnly}
+                    rootSchema={rootSchema}
+                    toggleProperty={toggleProperty}
+                    focusedProperty={focusedProperty}
+                    onFocusChange={onFocusChange}
+                    options={options}
+                    searchQuery={searchQuery}
+                    examplesHidden={examplesHidden}
+                  />
+                )}
+                {property.schema.oneOf && rootSchema && (
+                  <div className="oneof-selector-sibling-container">
+                    <OneOfSelector
+                      oneOfOptions={property.schema.oneOf}
                       rootSchema={rootSchema}
-                      propertyPath={property.path || [propertyKey]}
-                      onCopy={onCopy}
+                      propertyPath={property.path}
+                      _onCopy={onCopy}
+                      onCopyLink={onCopyLink}
+                      propertyStates={propertyStates}
+                      toggleProperty={toggleProperty}
+                      focusedProperty={focusedProperty}
+                      onFocusChange={onFocusChange}
                       options={options}
+                      searchQuery={searchQuery}
+                      initialSelectedIndex={(() => {
+                        if (typeof window === 'undefined') return 0;
+                        const hash = window.location.hash;
+                        if (!hash) return 0;
+                        const propertyKeyFromHash = hashToPropertyKey(hash);
+                        const hashIndex =
+                          extractOneOfIndexFromPath(propertyKeyFromHash);
+                        if (
+                          hashIndex >= 0 &&
+                          hashIndex < property.schema.oneOf.length
+                        ) {
+                          return hashIndex;
+                        }
+                        return 0;
+                      })()}
+                      hideDescription={false}
+                      disableNestedExamples={examplesHidden}
+                      renderNestedProperties={true}
+                      onSelectionChange={handleOneOfSelectionChange}
+                      isActiveRoute={isActiveRoute}
+                      propertyKey={propertyKey}
                     />
-                  ) : (
-                    <div className="examples-panel-unavailable">
-                      <div className="examples-panel-message">
-                        <span className="examples-panel-icon">ⓘ</span>
-                        Root schema unavailable
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              renderPropertyDetails()
+                  </div>
+                )}
+              </div>
             )}
           </div>
-
-          {hasNestedProperties && (
-            <Rows
-              className="nested-properties"
-              properties={nestedProperties}
-              propertyStates={propertyStates || {}}
-              onToggle={propertyKey => toggleProperty?.(propertyKey)}
-              onCopy={onCopy}
-              onCopyLink={onCopyLink}
-              collapsible={collapsible}
-              includeExamples={includeExamples && !examplesHidden}
-              examplesOnFocusOnly={examplesOnFocusOnly}
-              rootSchema={rootSchema}
-              toggleProperty={toggleProperty}
-              focusedProperty={focusedProperty}
-              onFocusChange={onFocusChange}
-              options={options}
-              searchQuery={searchQuery}
-              examplesHidden={examplesHidden}
-            />
-          )}
         </>
       )}
     </Row>

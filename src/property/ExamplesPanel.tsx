@@ -10,6 +10,7 @@ import './ExamplesPanel.styles.css';
 import { RadioGroup } from '../inputs';
 import { Button } from '../inputs';
 import { JsonSchema, JsonValue } from '../types';
+import { resolveSchema } from '../utils';
 
 // Import only the specific languages and themes we need
 import jsonLang from '@shikijs/langs/json';
@@ -35,6 +36,11 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
   onCopy,
   options,
 }) => {
+  // Generate unique name for this panel's radio group
+  const panelId = useMemo(() => {
+    const pathStr = propertyPath.join('-');
+    return `format-selector-${pathStr}-${Math.random().toString(36).substr(2, 9)}`;
+  }, [propertyPath]);
   const [selectedFormat, setSelectedFormat] = useState<Format>(() => {
     const defaultLanguage = options?.defaultExampleLanguage || 'yaml';
     if (typeof window === 'undefined') {
@@ -66,7 +72,7 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
       schema: JsonSchema,
       path: string[]
     ): { examples: JsonValue[]; propertyName: string } => {
-      // Check current property for examples
+      // For resolved schemas (already processed oneOf), check current property for examples
       if (schema.examples && schema.examples.length > 0) {
         return {
           examples: schema.examples,
@@ -74,29 +80,47 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
         };
       }
 
-      // Traverse up the property tree
-      if (path.length > 0 && rootSchema) {
-        const parentPath = path.slice(0, -1);
-        let parentSchema = rootSchema;
-
-        // Navigate to parent schema
-        for (const segment of parentPath) {
-          if (parentSchema.properties && parentSchema.properties[segment]) {
-            parentSchema = parentSchema.properties[segment];
-          } else if (parentSchema.patternProperties) {
-            // Handle pattern properties
-            const patternKeys = Object.keys(parentSchema.patternProperties);
-            if (patternKeys.length > 0) {
-              parentSchema = parentSchema.patternProperties[patternKeys[0]];
-            }
-          } else {
-            break;
+      // Check oneOf schemas for examples - but only if currentProperty is the original oneOf schema
+      if (schema.oneOf && Array.isArray(schema.oneOf) && rootSchema) {
+        for (const option of schema.oneOf) {
+          const resolvedOption = resolveSchema(option, rootSchema);
+          if (resolvedOption.examples && resolvedOption.examples.length > 0) {
+            return {
+              examples: resolvedOption.examples,
+              propertyName: path[path.length - 1] || 'property',
+            };
           }
         }
+      }
 
-        // Recursively check parent
-        if (parentPath.length >= 0) {
-          return findExamplesInHierarchy(parentSchema, parentPath);
+      // Check patternProperties for examples
+      if (schema.patternProperties && rootSchema) {
+        for (const patternSchema of Object.values(schema.patternProperties)) {
+          const resolvedPattern = resolveSchema(patternSchema, rootSchema);
+
+          // First check if pattern property itself has examples
+          if (resolvedPattern.examples && resolvedPattern.examples.length > 0) {
+            return {
+              examples: resolvedPattern.examples,
+              propertyName: path[path.length - 1] || 'property',
+            };
+          }
+
+          // Then check if pattern property has oneOf with examples
+          if (resolvedPattern.oneOf && Array.isArray(resolvedPattern.oneOf)) {
+            for (const option of resolvedPattern.oneOf) {
+              const resolvedOption = resolveSchema(option, rootSchema);
+              if (
+                resolvedOption.examples &&
+                resolvedOption.examples.length > 0
+              ) {
+                return {
+                  examples: resolvedOption.examples,
+                  propertyName: path[path.length - 1] || 'property',
+                };
+              }
+            }
+          }
         }
       }
 
@@ -110,16 +134,45 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
   }, [currentProperty, rootSchema, propertyPath]);
 
   useEffect(() => {
-    createHighlighterCore({
-      themes: [everforestLight, everforestDark],
-      langs: [jsonLang, yamlLang, tomlLang],
-      engine: createOnigurumaEngine(import('shiki/wasm')),
-    })
-      .then(setHighlighter)
-      .catch(error => {
-        console.warn('Failed to initialize Shiki highlighter:', error);
-        setHighlighterError(true);
-      });
+    let isMounted = true;
+    const abortController = new AbortController();
+
+    const initHighlighter = async () => {
+      try {
+        // Check if component is still mounted before starting async operations
+        if (!isMounted) return;
+
+        const wasmModule = await import('shiki/wasm');
+
+        // Check again after async operation
+        if (!isMounted || abortController.signal.aborted) return;
+
+        const engine = createOnigurumaEngine(wasmModule);
+        const highlighterCore = await createHighlighterCore({
+          themes: [everforestLight, everforestDark],
+          langs: [jsonLang, yamlLang, tomlLang],
+          engine: engine,
+        });
+
+        // Final check before setting state
+        if (isMounted && !abortController.signal.aborted) {
+          setHighlighter(highlighterCore);
+        }
+      } catch (error) {
+        // Only update state if component is still mounted
+        if (isMounted && !abortController.signal.aborted) {
+          console.warn('Failed to initialize Shiki highlighter:', error);
+          setHighlighterError(true);
+        }
+      }
+    };
+
+    initHighlighter();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   const convertToToml = useCallback(
@@ -137,20 +190,15 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
 
   const convertToFormat = useCallback(
     (value: unknown, format: Format): string => {
-      // For single base types, wrap in an object with the property name
-      const shouldWrapValue =
-        typeof value !== 'object' || value === null || Array.isArray(value);
-      const wrappedValue = shouldWrapValue ? { [propertyName]: value } : value;
-
       switch (format) {
         case 'json':
-          return JSON.stringify(wrappedValue, null, 2);
+          return JSON.stringify(value, null, 2);
         case 'yaml':
-          return yaml.dump(wrappedValue, { indent: 2, lineWidth: -1 });
+          return yaml.dump(value, { indent: 2, lineWidth: -1 });
         case 'toml':
           return convertToToml(value, propertyName);
         default:
-          return JSON.stringify(wrappedValue, null, 2);
+          return JSON.stringify(value, null, 2);
       }
     },
     [convertToToml, propertyName]
@@ -214,18 +262,7 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
   }, [examples, selectedFormat, convertToFormat, highlightCode]);
 
   if (!examples || examples.length === 0) {
-    return (
-      <div className="examples-panel">
-        <div className="examples-header">
-          <h4 className="examples-title">No Examples Available</h4>
-        </div>
-        <div className="examples-content">
-          <div className="no-examples-message">
-            No examples found for this property or its parent properties.
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -245,7 +282,7 @@ const ExamplesPanel: React.FC<ExamplesPanelProps> = ({
               // Note: We don't save to localStorage here as this should only affect
               // the current example, not the global default setting
             }}
-            name="format-selector"
+            name={panelId}
             size="md"
           />
           <Button

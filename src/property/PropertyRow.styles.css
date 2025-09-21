@@ -165,16 +165,19 @@
   color: var(--schema-text-muted);
   font-size: 0.8125rem;
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
 }
 
 .schema-container .property-description-block {
   color: var(--schema-text-secondary);
   font-size: var(--schema-text-base);
   line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .schema-container .schema-details .property-description-block:only-child {
@@ -211,21 +214,19 @@
   border-top: 1px solid var(--schema-border);
 }
 
-.schema-container
-  .properties-list
-  > .property.expanded
-  > .schema-details.schema-details-split {
-  padding: var(--schema-space-md);
-}
-
 .schema-container .schema-details {
   display: flex;
   flex-direction: column;
   gap: var(--schema-space-sm);
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   border-top: 1px solid var(--schema-border-subtle);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  padding: var(--schema-space-md) 0 var(--schema-space-md)
+    var(--schema-space-md);
 }
 
 @keyframes schema-expand {
@@ -241,73 +242,99 @@
 
 /* ===== SPLIT LAYOUT ===== */
 
-.schema-container
-  .properties-list
-  > .property.expanded
-  > .schema-details.schema-details-split,
-.schema-container
-  .nested-properties
-  .property.expanded
-  > .schema-details.schema-details-split {
-  flex-direction: row !important;
+.schema-container .schema-details-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--schema-space-lg);
   align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--schema-border-subtle);
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  padding: var(--schema-space-md);
 }
 
-/* Responsive behavior for examples panel - reflow to column layout at smaller screens */
-@media (max-width: 768px) {
-  .schema-container
-    .properties-list
-    > .property.expanded
-    > .schema-details.schema-details-split,
-  .schema-container
-    .nested-properties
-    .property.expanded
-    > .schema-details.schema-details-split {
-    flex-direction: column !important;
+@media (max-width: 1024px) {
+  .schema-container .property.expanded .schema-details.schema-details-split {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: var(--schema-space-md);
   }
 
-  .schema-container .schema-details-split .schema-details-left {
-    max-width: 100%;
-    flex: none;
+  .schema-container
+    .property.expanded
+    .schema-details-split
+    .schema-details-left {
+    padding-right: 0;
   }
 
-  .schema-container .schema-details-right {
-    max-width: 100%;
-    flex: none;
-    width: 100%;
+  .schema-container
+    .property.expanded
+    .schema-details-split
+    .schema-details-right {
+    border-left: none;
+    border-top: 1px solid var(--schema-border-subtle);
+    padding-left: 0;
+    padding-top: var(--schema-space-md);
+  }
+}
+
+/* Container query to collapse grid when space is tight */
+@container (max-width: 900px) {
+  .schema-container .property.expanded .schema-details.schema-details-split {
+    grid-template-columns: 1fr;
+    gap: var(--schema-space-md);
   }
 
-  .schema-container .schema-details-right .examples-panel {
+  .schema-container
+    .property.expanded
+    .schema-details-split
+    .schema-details-left {
+    padding-right: 0;
+  }
+
+  .schema-container
+    .property.expanded
+    .schema-details-split
+    .schema-details-right {
+    border-left: none;
+    border-top: 1px solid var(--schema-border-subtle);
+    padding-left: 0;
+    padding-top: var(--schema-space-md);
+  }
+}
+
+/* Additional responsive behavior for smaller screens */
+@media (max-width: 640px) {
+  .schema-container .property.expanded .schema-details-right .examples-panel {
     width: 100%;
+    max-width: 100%;
   }
 }
 
 .schema-container .schema-details-left {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--schema-space-sm);
   overflow-wrap: break-word;
-  overflow: hidden;
-}
-
-@media (min-width: 769px) {
-  .schema-container .schema-details-split .schema-details-left {
-    max-width: 50%;
-  }
-
-  .schema-container .schema-details-right {
-    max-width: 50%;
-  }
+  word-break: break-word;
+  padding-right: var(--schema-space-sm);
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .schema-container .schema-details-right {
-  flex: 1;
   min-width: 0;
-  overflow: hidden;
+  padding-left: var(--schema-space-md);
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* ===== CONSTRAINTS AND VALUES ===== */
@@ -422,7 +449,7 @@
 }
 
 .schema-container .code-control-button:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--schema-accent-soft);
   color: var(--schema-text);
   border-color: var(--schema-accent);
 }
@@ -458,7 +485,6 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  border-top: 1px solid var(--schema-border-subtle);
 }
 
 .schema-container .nested-indicator {
@@ -477,11 +503,29 @@
   margin-left: 0;
 }
 
+/* Property content container for new architecture */
+.schema-container .property-content-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Nested fields sibling - full width container for oneOf nested properties */
+.schema-container .nested-fields-sibling {
+  width: 100%;
+  padding: var(--schema-space-md) 0 0 0;
+  background: transparent;
+  margin-top: var(--schema-space-sm);
+}
+
 /* Ensure nested properties appear outside the split layout */
 .schema-container .property.expanded > .nested-properties {
   padding: var(--schema-space-md) 0 var(--schema-space-md)
     var(--schema-space-md);
-  border-top: 1px solid var(--schema-border);
+  border-top: 1px solid var(--schema-border-subtle);
   background: transparent;
 }
 
@@ -801,4 +845,18 @@
 
 .schema-container .property.invalid-schema:hover {
   background: rgba(239, 68, 68, 0.08);
+}
+
+/* ===== DARK MODE ADJUSTMENTS ===== */
+
+@media (prefers-color-scheme: dark) {
+  .schema-container .schema-details-split {
+    border-top-color: var(--schema-border-subtle);
+  }
+
+  @media (max-width: 640px) {
+    .schema-container .schema-details-right {
+      border-top-color: var(--schema-border-subtle);
+    }
+  }
 }

@@ -3,12 +3,14 @@
 .schema-container .examples-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
   background: var(--schema-surface);
   border: 1px solid var(--schema-border);
   border-radius: var(--schema-radius-md);
-  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .schema-container .examples-header {
@@ -67,7 +69,7 @@
 
 .schema-container .wrap-toggle-button:hover,
 .schema-container .copy-button:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--schema-accent-soft);
   color: var(--schema-text);
 }
 
@@ -76,10 +78,13 @@
 }
 
 .schema-container .examples-content {
-  flex: 1;
-  overflow-y: auto;
   padding: var(--schema-space-md);
-  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  align-self: end;
 }
 
 .schema-container .no-examples-message {
@@ -91,6 +96,10 @@
 
 .schema-container .example-item {
   margin-bottom: var(--schema-space-md);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .schema-container .example-item:last-child {
@@ -130,7 +139,7 @@
 }
 
 .schema-container .example-copy-button:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--schema-accent-soft);
   color: var(--schema-text);
 }
 
@@ -153,7 +162,12 @@
 
 .schema-container .code-container {
   position: relative;
-  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .schema-container .code-fallback {
@@ -167,12 +181,18 @@
   overflow-x: auto;
   white-space: pre;
   color: var(--schema-code-text);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .schema-container .code-fallback.wrap {
   white-space: pre-wrap;
-  word-break: break-word;
-  overflow-x: hidden;
+  word-break: break-all;
+  overflow-x: auto;
 }
 
 .schema-container .code-fallback.nowrap {
@@ -184,17 +204,22 @@
 .schema-container .code-container .shiki {
   margin: 0;
   border-radius: var(--schema-radius-md);
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .schema-container .code-container .shiki.wrap {
-  overflow-x: hidden;
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: break-all;
+  overflow-x: auto;
 }
 
 .schema-container .code-container .shiki.nowrap {
   overflow-x: auto;
   white-space: pre;
+  max-width: 100%;
 }
 
 /* Scrollbar styling for examples content */
@@ -217,16 +242,18 @@
 
 /* Code container scrollbar - neutral colors */
 .schema-container .code-container::-webkit-scrollbar {
-  height: 6px;
+  height: 8px;
+  width: 8px;
 }
 
 .schema-container .code-container::-webkit-scrollbar-track {
   background: var(--schema-surface-hover);
+  border-radius: 4px;
 }
 
 .schema-container .code-container::-webkit-scrollbar-thumb {
   background: var(--schema-border);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .schema-container .code-container::-webkit-scrollbar-thumb:hover {
@@ -238,6 +265,7 @@
   .schema-container .examples-panel {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .schema-container .examples-header {
@@ -246,24 +274,35 @@
     justify-content: space-between;
     gap: var(--schema-space-sm);
     padding: var(--schema-space-md);
+    flex-wrap: wrap;
+    min-width: 0;
   }
 
   .schema-container .examples-controls {
     flex-shrink: 0;
+    min-width: 0;
   }
 
   .schema-container .examples-content {
     width: 100%;
+    min-width: 0;
   }
 
   .schema-container .example-item {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
   .schema-container .code-container {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
+  }
+
+  .schema-container .code-fallback {
+    font-size: var(--schema-text-xs);
+    padding: var(--schema-space-sm);
   }
 }
 

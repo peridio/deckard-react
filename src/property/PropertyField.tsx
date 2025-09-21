@@ -269,7 +269,9 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
     property.depth > 0 ? 'nested-property' : '',
     state.expanded ? 'expanded' : '',
     property.depth > 0 ? `depth-${Math.min(property.depth, 3)}` : '',
-    includeExamples && hasValidSchema && hasExamples(property.schema)
+    includeExamples &&
+    hasValidSchema &&
+    hasExamples(property.schema, rootSchema)
       ? 'has-examples'
       : '',
     !hasValidSchema ? 'invalid-schema' : '',
@@ -466,17 +468,19 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
 
       {state.expanded && hasValidSchema && (
         <div
-          className={`schema-details ${includeExamples && hasExamples(property.schema) && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
-          data-has-examples={hasExamples(property.schema)}
+          className={`schema-details ${includeExamples && hasExamples(property.schema, rootSchema) && !property.schema.oneOf && (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? 'schema-details-split' : ''}`}
+          data-has-examples={hasExamples(property.schema, rootSchema)}
           data-include-examples={includeExamples}
           data-split-active={
             includeExamples &&
-            hasExamples(property.schema) &&
+            hasExamples(property.schema, rootSchema) &&
+            !property.schema.oneOf &&
             (examplesOnFocusOnly ? focusedProperty === propertyKey : true)
           }
         >
           {includeExamples &&
-          hasExamples(property.schema) &&
+          hasExamples(property.schema, rootSchema) &&
+          !property.schema.oneOf &&
           (examplesOnFocusOnly ? focusedProperty === propertyKey : true) ? (
             <>
               <div className="schema-details-left">
@@ -486,7 +490,7 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                 className="schema-details-right"
                 data-debug="examples-panel-container"
               >
-                {rootSchema ? (
+                {rootSchema && (
                   <ExamplesPanel
                     currentProperty={property.schema}
                     rootSchema={rootSchema}
@@ -494,13 +498,6 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
                     onCopy={onCopy}
                     options={options}
                   />
-                ) : (
-                  <div className="examples-panel-unavailable">
-                    <div className="examples-panel-message">
-                      <span className="examples-panel-icon">ⓘ</span>
-                      Root schema unavailable
-                    </div>
-                  </div>
                 )}
               </div>
             </>

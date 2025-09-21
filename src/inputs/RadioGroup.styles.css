@@ -156,29 +156,46 @@
 
 @media (max-width: 768px) {
   .schema-container .radio-group {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0;
   }
 
   .schema-container .radio-option {
-    flex: 1;
-    border-right: none;
-    border-bottom: 1px solid var(--schema-border);
+    flex: 0 0 auto;
+    min-width: 60px;
+    border-right: 1px solid var(--schema-border);
   }
 
   .schema-container .radio-option:last-child {
-    border-bottom: none;
+    border-right: none;
   }
 
   .schema-container .radio-label {
     text-align: center;
     justify-content: center;
+    white-space: nowrap;
+    padding: 0 var(--schema-space-sm);
   }
 }
 
 @media (max-width: 640px) {
+  .schema-container .radio-group {
+    border-radius: var(--schema-radius-sm);
+    overflow: hidden;
+  }
+
+  .schema-container .radio-option {
+    min-width: 50px;
+  }
+
   .schema-container .radio-label {
-    padding: var(--schema-space-sm) var(--schema-space-xs);
-    font-size: calc(var(--schema-text-xs) * 0.9);
+    padding: var(--schema-space-xs);
+    font-size: calc(var(--schema-text-xs) * 0.85);
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

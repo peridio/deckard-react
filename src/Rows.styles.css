@@ -8,16 +8,23 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  overflow: visible;
 }
 
 /* Inherit existing styles when used as properties-list */
 .schema-container .properties-rows.properties-list {
   overflow: visible;
   background: transparent;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Inherit existing styles when used as nested-properties */
 .schema-container .properties-rows.nested-properties {
   margin: var(--schema-space-md) 0 0 0;
   padding: 0 0 0 var(--schema-space-lg);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
 }

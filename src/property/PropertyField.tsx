@@ -183,12 +183,16 @@ const PropertyField: React.FC<PropertyFieldProps> = ({
         return; // Let browser handle navigation
       }
 
-      // Set this property as focused when clicking link
-      onFocusChange?.(propertyKey);
-      // Expand the field if it's not already expanded
-      if (collapsible && hasValidSchema && !state.expanded) {
-        onToggle();
-      }
+      // Don't prevent default - let browser handle navigation first
+      // Use setTimeout to allow browser navigation to complete before our updates
+      setTimeout(() => {
+        // Set this property as focused when clicking link
+        onFocusChange?.(propertyKey);
+        // Expand the field if it's not already expanded
+        if (collapsible && hasValidSchema && !state.expanded) {
+          onToggle();
+        }
+      }, 0);
     },
     [
       onFocusChange,

@@ -499,8 +499,6 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
   // Handle URL hash navigation and hash changes
   useEffect(() => {
-    let isInitialLoad = true;
-
     const handleHashNavigation = () => {
       const hash = typeof window !== 'undefined' ? window.location.hash : '';
       if (hash) {
@@ -545,7 +543,6 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
 
     // Handle initial hash on mount
     handleHashNavigation();
-    isInitialLoad = false;
 
     // Listen for hash changes
     if (typeof window !== 'undefined') {

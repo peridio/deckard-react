@@ -423,6 +423,7 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     results: 0,
   });
   const [focusedProperty, setFocusedProperty] = useState<string | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const [keyboardModalOpen, setKeyboardModalOpen] = useState(false);
   const [examplesHidden, setExamplesHidden] = useState(false);
 
@@ -496,46 +497,79 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
     setPropertyStates(newStates);
   }, [schema, autoExpand]);
 
-  // Handle URL hash navigation - only on mount
-  // Handle URL hash navigation - only on mount
+  // Handle URL hash navigation and hash changes
   useEffect(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    if (hash) {
-      const fieldKey = hashToPropertyKey(hash);
+    let isInitialLoad = true;
 
-      // Update property states to expand path to target
-      setPropertyStates(prev => {
-        const newStates = { ...prev };
+    const handleHashNavigation = () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : '';
+      if (hash) {
+        const fieldKey = hashToPropertyKey(hash);
 
-        // Expand all parent paths to make the target field visible
-        const pathParts = fieldKey.split('.');
+        // Update property states to expand path to target
+        setPropertyStates(prev => {
+          const newStates = { ...prev };
 
-        for (let i = 1; i <= pathParts.length; i++) {
-          const parentPath = pathParts.slice(0, i).join('.');
+          // Expand all parent paths to make the target field visible
+          const pathParts = fieldKey.split('.');
 
-          if (newStates[parentPath]) {
-            newStates[parentPath] = {
-              ...newStates[parentPath],
-              expanded: true,
-            };
-          } else {
-            newStates[parentPath] = {
-              expanded: true,
-              hasDetails: true,
-              matchesSearch: true,
-              isDirectMatch: false,
-              hasNestedMatches: false,
-            };
+          for (let i = 1; i <= pathParts.length; i++) {
+            const parentPath = pathParts.slice(0, i).join('.');
+
+            if (newStates[parentPath]) {
+              newStates[parentPath] = {
+                ...newStates[parentPath],
+                expanded: true,
+              };
+            } else {
+              newStates[parentPath] = {
+                expanded: true,
+                hasDetails: true,
+                matchesSearch: true,
+                isDirectMatch: false,
+                hasNestedMatches: false,
+              };
+            }
           }
-        }
 
-        return newStates;
-      });
+          return newStates;
+        });
 
-      // Set the focused property state for proper styling
-      setFocusedProperty(fieldKey);
+        // Set the focused property state for proper styling
+        setFocusedProperty(fieldKey);
+
+        // Set a flag to trigger scrolling after state updates
+        setScrollTarget(fieldKey);
+      }
+    };
+
+    // Handle initial hash on mount
+    handleHashNavigation();
+    isInitialLoad = false;
+
+    // Listen for hash changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('hashchange', handleHashNavigation);
+      return () =>
+        window.removeEventListener('hashchange', handleHashNavigation);
     }
   }, []);
+
+  // Handle scrolling after state updates complete
+  useEffect(() => {
+    if (scrollTarget && typeof document !== 'undefined') {
+      const targetElement = document.getElementById(
+        propertyKeyToHash(scrollTarget)
+      );
+      if (targetElement && typeof targetElement.scrollIntoView === 'function') {
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+      setScrollTarget(null);
+    }
+  }, [scrollTarget, propertyStates]);
 
   // Update search results
   useEffect(() => {
@@ -744,37 +778,36 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
   // Navigation helpers
   const focusProperty = useCallback((propertyKey: string) => {
     setFocusedProperty(propertyKey);
-    setTimeout(() => {
-      if (typeof document === 'undefined' || typeof window === 'undefined') {
-        return;
-      }
 
-      const element = document.querySelector(
-        `[data-property-key="${propertyKey}"]`
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+
+    const element = document.querySelector(
+      `[data-property-key="${propertyKey}"]`
+    ) as HTMLElement;
+    if (element) {
+      // Focus the header container to trigger :focus-within like clicking does
+      const headerContainer = element.querySelector(
+        '.property-header-container'
       ) as HTMLElement;
-      if (element) {
-        // Focus the header container to trigger :focus-within like clicking does
-        const headerContainer = element.querySelector(
-          '.property-header-container'
-        ) as HTMLElement;
-        if (headerContainer) {
-          headerContainer.focus();
-        } else {
-          element.setAttribute('tabindex', '-1');
-          element.focus();
-        }
-
-        const rect = element.getBoundingClientRect();
-        const viewportHeight =
-          typeof window !== 'undefined' ? window.innerHeight : 0;
-        const isInView = rect.top >= 0 && rect.bottom <= viewportHeight;
-
-        // Only scroll if the element is not fully visible
-        if (!isInView && typeof element.scrollIntoView === 'function') {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+      if (headerContainer) {
+        headerContainer.focus();
+      } else {
+        element.setAttribute('tabindex', '-1');
+        element.focus();
       }
-    }, 50);
+
+      const rect = element.getBoundingClientRect();
+      const viewportHeight =
+        typeof window !== 'undefined' ? window.innerHeight : 0;
+      const isInView = rect.top >= 0 && rect.bottom <= viewportHeight;
+
+      // Only scroll if the element is not fully visible
+      if (!isInView && typeof element.scrollIntoView === 'function') {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   }, []);
 
   const getAllNavigableProperties = useCallback(() => {
@@ -1134,10 +1167,13 @@ export const DeckardSchema: React.FC<DeckardSchemaProps> = ({
       const anchor = `#${propertyKeyToHash(propertyKey)}`;
       const url = `${window.location.origin}${window.location.pathname}${anchor}`;
 
-      // Update the URL in the address bar (this will trigger native browser scrolling)
+      // Update the URL in the address bar
       window.location.hash = anchor;
 
-      // Focus the current element
+      // Set scroll target for deterministic scrolling after state updates
+      setScrollTarget(propertyKey);
+
+      // Focus immediately since it doesn't depend on DOM updates
       element.focus();
 
       try {
